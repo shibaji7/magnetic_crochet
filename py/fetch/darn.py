@@ -11,12 +11,13 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import os
 import bz2
 import datetime as dt
 import glob
-import pandas as pd
+import os
+
 import numpy as np
+import pandas as pd
 import pydarnio as pydarn
 from loguru import logger
 

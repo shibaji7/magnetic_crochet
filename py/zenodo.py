@@ -26,6 +26,7 @@ def fetch_API_key():
     ACCESS_TOKEN = zenodo["ACCESS_TOKEN"]
     return ACCESS_TOKEN
 
+
 class Zenodo(object):
     """
     This class interacts with zenondo using REST API.
@@ -59,7 +60,7 @@ class Zenodo(object):
         self.baseurl = f"https://zenodo.org/api"
         # TODO get project details by name
         return
-    
+
     def upload_files(self):
         """
         Upload data and files
