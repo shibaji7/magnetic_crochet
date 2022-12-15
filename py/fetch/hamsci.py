@@ -13,14 +13,16 @@ __status__ = "Research"
 
 
 import datetime
-import pytz
-import numpy as np
-from cryptography.fernet import Fernet
 
+import pytz
+from cryptography.fernet import Fernet
+#import paramiko
+import json
 from hamsci_psws import grape1
 
+
 class Conn2Remote(object):
-    def __init__(self, host, user, key_filename, port=22, passcode=None):
+    def __init__(self, host, user, password, key_filename, port=22, passcode=None):
         self.host = host
         self.user = user
         self.key_filename = key_filename
@@ -63,7 +65,7 @@ class Conn2Remote(object):
             self.ssh.close()
         return
 
-    
+
 def encrypt(host, user, password, filename="config/passcode.json"):
     passcode = Fernet.generate_key()
     cipher_suite = Fernet(passcode)
@@ -90,7 +92,7 @@ class HamSci(object):
     """
     This class is help to extract the dataset from HamSci database and plot.
     """
-    
+
     def __init__(self, f0, dates):
         """
         Parameters:
@@ -100,20 +102,23 @@ class HamSci(object):
         """
         self.f0 = f0
         self.dates = dates
-        
+
         self.inventory = grape1.DataInventory(data_path="scripts/data/")
-        self.inventory.filter(freq=self.f0,sTime=self.dates[0],eTime=self.dates[1])
-        self.grape_nodes = grape1.GrapeNodes(fpath="scripts/nodelist.csv", logged_nodes=self.inventory.logged_nodes)
+        self.inventory.filter(freq=self.f0, sTime=self.dates[0], eTime=self.dates[1])
+        self.grape_nodes = grape1.GrapeNodes(
+            fpath="scripts/nodelist.csv", logged_nodes=self.inventory.logged_nodes
+        )
         return
-    
+
     def summary_plots(self):
         return
-    
-    
+
+
 if __name__ == "__main__":
-    dates = [
-        datetime.datetime(2021,10,28,0, tzinfo=pytz.UTC),
-        datetime.datetime(2021,10,29,0, tzinfo=pytz.UTC)
-    ]
-    f0 = 10e6
-    HamSci(f0, dates)
+#     dates = [
+#         datetime.datetime(2021, 10, 28, 0, tzinfo=pytz.UTC),
+#         datetime.datetime(2021, 10, 29, 0, tzinfo=pytz.UTC),
+#     ]
+#     f0 = 10e6
+#     HamSci(f0, dates)
+    encrypt('208.109.41.230', 'grape@wwvarc.org', '5F3gjdEKEt')

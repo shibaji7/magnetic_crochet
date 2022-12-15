@@ -40,8 +40,8 @@ class Hopper(object):
         Populate all data tables from GOES, FISM2, SuperDARN, and SuperMAG.
         """
 
-        from flare import FlareTS
         from darn import FetchFitData
+        from flare import FlareTS
         from smag import SuperMAG
 
         self.base = base

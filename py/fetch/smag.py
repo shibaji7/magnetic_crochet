@@ -17,9 +17,8 @@ import os
 import matplotlib.dates as mdates
 import pandas as pd
 from loguru import logger
-from tqdm import tqdm
-
 from supermag import *
+from tqdm import tqdm
 
 
 class SuperMAG(object):
