@@ -115,10 +115,10 @@ class HamSci(object):
 
 
 if __name__ == "__main__":
-#     dates = [
-#         datetime.datetime(2021, 10, 28, 0, tzinfo=pytz.UTC),
-#         datetime.datetime(2021, 10, 29, 0, tzinfo=pytz.UTC),
-#     ]
-#     f0 = 10e6
-#     HamSci(f0, dates)
-    encrypt('208.109.41.230', 'grape@wwvarc.org', '5F3gjdEKEt')
+    dates = [
+        datetime.datetime(2021, 10, 28, 0, tzinfo=pytz.UTC),
+        datetime.datetime(2021, 10, 29, 0, tzinfo=pytz.UTC),
+    ]
+    f0 = 10e6
+    HamSci(f0, dates)
+    
