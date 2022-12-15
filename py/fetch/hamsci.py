@@ -15,8 +15,75 @@ __status__ = "Research"
 import datetime
 import pytz
 import numpy as np
+from cryptography.fernet import Fernet
 
 from hamsci_psws import grape1
+
+class Conn2Remote(object):
+    def __init__(self, host, user, key_filename, port=22, passcode=None):
+        self.host = host
+        self.user = user
+        self.key_filename = key_filename
+        self.passcode = passcode
+        self.port = port
+        self.con = False
+        if passcode:
+            self.decrypt()
+        self.conn()
+        return
+
+    def decrypt(self):
+        passcode = bytes(self.passcode, encoding="utf8")
+        cipher_suite = Fernet(passcode)
+        self.user = cipher_suite.decrypt(bytes(self.user, encoding="utf8")).decode(
+            "utf-8"
+        )
+        self.host = cipher_suite.decrypt(bytes(self.host, encoding="utf8")).decode(
+            "utf-8"
+        )
+        return
+
+    def conn(self):
+        if not self.con:
+            self.ssh = paramiko.SSHClient()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh.connect(
+                hostname=self.host,
+                port=self.port,
+                username=self.user,
+                key_filename=self.key_filename,
+            )
+            self.scp = paramiko.SFTPClient.from_transport(self.ssh.get_transport())
+            self.con = True
+        return
+
+    def close(self):
+        if self.con:
+            self.scp.close()
+            self.ssh.close()
+        return
+
+    
+def encrypt(host, user, password, filename="config/passcode.json"):
+    passcode = Fernet.generate_key()
+    cipher_suite = Fernet(passcode)
+    host = cipher_suite.encrypt(bytes(host, encoding="utf8"))
+    user = cipher_suite.encrypt(bytes(user, encoding="utf8"))
+    password = cipher_suite.encrypt(bytes(password, encoding="utf8"))
+    with open(filename, "w") as f:
+        f.write(
+            json.dumps(
+                {
+                    "user": user.decode("utf-8"),
+                    "host": host.decode("utf-8"),
+                    "password": password.decode("utf-8"),
+                    "passcode": passcode.decode("utf-8"),
+                },
+                sort_keys=True,
+                indent=4,
+            )
+        )
+    return
 
 
 class HamSci(object):
