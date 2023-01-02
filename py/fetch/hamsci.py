@@ -12,20 +12,23 @@ __email__ = "TODO"
 __status__ = "Research"
 
 
-import datetime
+import datetime as dt
 
 import pytz
 from cryptography.fernet import Fernet
-#import paramiko
+from ftplib import FTP
+from loguru import logger
 import json
 from hamsci_psws import grape1
+import pandas as pd
+
 
 
 class Conn2Remote(object):
-    def __init__(self, host, user, password, key_filename, port=22, passcode=None):
+    def __init__(self, host, user, password, port=22, passcode=None):
         self.host = host
         self.user = user
-        self.key_filename = key_filename
+        self.password = password
         self.passcode = passcode
         self.port = port
         self.con = False
@@ -43,26 +46,20 @@ class Conn2Remote(object):
         self.host = cipher_suite.decrypt(bytes(self.host, encoding="utf8")).decode(
             "utf-8"
         )
+        self.password = cipher_suite.decrypt(bytes(self.password, encoding="utf8")).decode(
+            "utf-8"
+        )
         return
 
     def conn(self):
         if not self.con:
-            self.ssh = paramiko.SSHClient()
-            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self.ssh.connect(
-                hostname=self.host,
-                port=self.port,
-                username=self.user,
-                key_filename=self.key_filename,
-            )
-            self.scp = paramiko.SFTPClient.from_transport(self.ssh.get_transport())
+            self.ftp = FTP(self.host, self.user, self.password)
             self.con = True
         return
 
     def close(self):
         if self.con:
-            self.scp.close()
-            self.ssh.close()
+            self.ftp.quit()
         return
 
 
@@ -87,27 +84,77 @@ def encrypt(host, user, password, filename="config/passcode.json"):
         )
     return
 
+def get_session(filename="config/passcode.json", isclose=False):
+    with open(filename, "r") as f:
+        obj = json.loads("".join(f.readlines()))
+        conn = Conn2Remote(
+            obj["host"],
+            obj["user"],
+            obj["password"],
+            passcode=obj["passcode"],
+        )
+    if isclose:
+        conn.close()
+    return conn
+
 
 class HamSci(object):
     """
     This class is help to extract the dataset from HamSci database and plot.
     """
 
-    def __init__(self, f0, dates):
+    def __init__(self, fList, dates, close=True):
         """
         Parameters:
         -----------
-        f0: Frequency of operation in Hz
+        fList: Frequency of operation in MHz (list)
         dates: Start and end dates
         """
-        self.f0 = f0
+        self.fList = fList
         self.dates = dates
 
-        self.inventory = grape1.DataInventory(data_path="scripts/data/")
-        self.inventory.filter(freq=self.f0, sTime=self.dates[0], eTime=self.dates[1])
-        self.grape_nodes = grape1.GrapeNodes(
-            fpath="scripts/nodelist.csv", logged_nodes=self.inventory.logged_nodes
-        )
+#         self.inventory = grape1.DataInventory(data_path="scripts/data/")
+#         self.inventory.filter(freq=self.f0, sTime=self.dates[0], eTime=self.dates[1])
+#         self.grape_nodes = grape1.GrapeNodes(
+#             fpath="scripts/nodelist.csv", logged_nodes=self.inventory.logged_nodes
+#         )
+        logger.info("Loging into remote FTP")
+        self.conn = get_session()
+        self.fetch_files()
+        if close: 
+            logger.info("System logging out from remote.")
+            self.conn.close()
+        return
+    
+    def fetch_files(self):
+        """
+        Fetch all the available files on the given date/time range and frequencies.
+        Compile and store to one location under other files.
+        """
+        o = []
+        files = self.conn.ftp.nlst()
+        for file in files:
+            if (".csv" in file):
+                info = file.split("_")
+                date = dt.datetime.strptime(info[0].split("T")[0], "%Y-%m-%d")
+                node, frq = info[1], info[-1].replace(".csv", "").replace("WWV", "").replace("CHU", "")
+                if "p" in frq: frq = frq.replace("p", ".")
+                if frq.isnumeric(): 
+                    frq = float(frq)
+                    o.append({
+                        "node": node,
+                        "frq": frq,
+                        "fname": file,
+                        "date": date
+                    })
+        o = pd.DataFrame.from_records(o)
+        o.date = o.date.apply(lambda x: x.to_pydatetime())
+        print(o.head())
+        logger.info(f"Number of files {len(o)}")
+        if self.fList: o = o.query("frq in @self.fList")
+        o = o[(o.date>=self.dates[0]) & (o.date<=self.dates[1])]
+        logger.info(f"Number of files after {len(o)}")
+        print(o.head())
         return
 
     def summary_plots(self):
@@ -116,9 +163,9 @@ class HamSci(object):
 
 if __name__ == "__main__":
     dates = [
-        datetime.datetime(2021, 10, 28, 0, tzinfo=pytz.UTC),
-        datetime.datetime(2021, 10, 29, 0, tzinfo=pytz.UTC),
+        dt.datetime(2021, 10, 28),
+        dt.datetime(2021, 10, 29),
     ]
-    f0 = 10e6
-    HamSci(f0, dates)
+    fList = [10, 5, 2.5]
+    HamSci(fList, dates)
     
