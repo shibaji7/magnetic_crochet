@@ -42,6 +42,7 @@ class Hopper(object):
 
         from darn import FetchFitData
         from flare import FlareTS
+        from hamsci import HamSci
         from smag import SuperMAG
 
         self.base = base
@@ -62,7 +63,7 @@ class Hopper(object):
                 rad,
             )
         self.magObs = SuperMAG(self.base, self.dates, stations=mag_stations)
-
+        self.hamSci = HamSci(self.base, self.dates, None)
         self.GenerateSummaryPlots()
         return
 

@@ -158,18 +158,20 @@ class FetchFitData(object):
                 self.records = pd.concat([self.records, o])
                 self.echoRecords.append(eRec)
             self.echoRecords = pd.DataFrame.from_records(self.echoRecords)
-            self.echoRecords.to_csv(
-                self.base + "%s.eRec.csv" % self.rad,
-                header=True,
-                index=False,
-                float_format="%g",
-            )
-            self.records.to_csv(
-                self.base + "%s.DFRec.csv" % self.rad,
-                header=True,
-                index=False,
-                float_format="%g",
-            )
+            if len(self.echoRecords) > 0:
+                self.echoRecords.to_csv(
+                    self.base + "%s.eRec.csv" % self.rad,
+                    header=True,
+                    index=False,
+                    float_format="%g",
+                )
+            if len(self.records) > 0:
+                self.records.to_csv(
+                    self.base + "%s.DFRec.csv" % self.rad,
+                    header=True,
+                    index=False,
+                    float_format="%g",
+                )
         return
 
     def __loadLocal__(self):

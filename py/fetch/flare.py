@@ -34,7 +34,7 @@ class FlareTS(object):
         self.dates = dates
         self.dfs = {}
         self.__loadGOES__()
-        self.__loadRHESSI__()
+        # self.__loadRHESSI__()
         return
 
     def __loadGOES__(self):

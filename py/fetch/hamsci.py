@@ -104,20 +104,20 @@ class HamSci(object):
     This class is help to extract the dataset from HamSci database and plot.
     """
 
-    def __init__(self, fList, dates, base, close=True):
+    def __init__(self, base, dates, fList, close=True):
         """
         Parameters:
         -----------
+        base: Base location
         fList: Frequency of operation in MHz (list)
         dates: Start and end dates
-        base: Base location
         close: Close FTP connection
         """
         self.fList = fList
-        self.dates = dates
-        self.base = base
-        if not os.path.exists(base):
-            os.makedirs(base)
+        self.dates = self.parse_dates(dates)
+        self.base = base + "hamsci/"
+        if not os.path.exists(self.base):
+            os.makedirs(self.base)
         logger.info("Loging into remote FTP")
         self.conn = get_session()
         self.fetch_files()
@@ -126,6 +126,16 @@ class HamSci(object):
             logger.info("System logging out from remote.")
             self.conn.close()
         return
+
+    def parse_dates(self, dates):
+        """
+        Parsing dates
+        """
+        da = [
+            dates[0].to_pydatetime().replace(minute=0, hour=0, second=0),
+            dates[1].to_pydatetime().replace(minute=0, hour=0, second=0),
+        ]
+        return da
 
     def fetch_files(self):
         """
@@ -183,4 +193,4 @@ if __name__ == "__main__":
     ]
     fList = [10, 5, 2.5]
     base = "data/2021-10-28/"
-    HamSci(fList, dates, base)
+    HamSci(base, dates, fList)
