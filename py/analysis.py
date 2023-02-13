@@ -18,6 +18,8 @@ import pandas as pd
 
 sys.path.extend(["py/", "py/fetch/"])
 
+from plotRTI import RTI
+
 
 class Hopper(object):
     """
@@ -33,6 +35,8 @@ class Hopper(object):
         base,
         dates,
         rads,
+        event,
+        event_start,
         uid="shibaji7",
         mag_stations=None,
     ):
@@ -40,7 +44,7 @@ class Hopper(object):
         Populate all data tables from GOES, FISM2, SuperDARN, and SuperMAG.
         """
 
-        from darn import FetchFitData
+        from darn import FetchData
         from flare import FlareTS
         from hamsci import HamSci
         from smag import SuperMAG
@@ -48,23 +52,18 @@ class Hopper(object):
         self.base = base
         self.dates = dates
         self.rads = rads
+        self.event = event
+        self.event_start = event_start
         self.uid = uid
         self.mag_stations = mag_stations
 
         if not os.path.exists(base):
             os.makedirs(base)
         self.flareTS = FlareTS(self.dates)
-        self.darns = {}
-        for rad in self.rads:
-            self.darns[rad] = FetchFitData(
-                self.base,
-                self.dates[0],
-                self.dates[1],
-                rad,
-            )
+        self.darns = FetchData.fetch(base, self.rads, self.dates)
         self.magObs = SuperMAG(self.base, self.dates, stations=mag_stations)
         self.hamSci = HamSci(self.base, self.dates, None)
-        self.GenerateSummaryPlots()
+        self.GenerateRadarRTIPlots()
         return
 
     def CompileSMJSummaryPlots(
@@ -76,10 +75,32 @@ class Hopper(object):
 
         return
 
-    def GenerateSummaryPlots(self):
+    def GenerateRadarRTIPlots(self):
         """
-        Generate Fan plots and other summary plots.
+        Generate RTI summary plots.
         """
+        base = self.base + "figures/rti/"
+        os.makedirs(base, exist_ok=True)
+        for rad in self.rads:
+            if hasattr(self.darns[rad], "records") > 0:
+                ffd = self.darns[rad].records
+                for b in ffd.bmnum.unique():
+                    rti = RTI(
+                        100,
+                        self.dates,
+                        fig_title=f"{rad.upper()} / {self.dates[0].strftime('%Y-%m-%d')} / {b}",
+                    )
+                    ax = rti.addParamPlot(ffd, b, "", cbar=True)
+                    rti.add_vlines(ax, [self.event, self.event_start], ["k", "r"])
+                    rti.save(base + f"{rad}-{'%02d'%b}.png")
+                    rti.close()
+        return
+
+    def GenerateRadarFoVPlots(self):
+        """
+        Generate FoV summary plots.
+        """
+
         return
 
 
@@ -90,7 +111,7 @@ def fork_event_based_mpi(file="config/events.csv"):
     to pre-process and store the
     dataset.
     """
-    o = pd.read_csv(file, parse_dates=["event", "s_time", "e_time"])
+    o = pd.read_csv(file, parse_dates=["event", "start", "s_time", "e_time"])
     for i, row in o.iterrows():
         ev = row["event"]
         base = "data/{Y}-{m}-{d}-{H}-{M}/".format(
@@ -102,7 +123,7 @@ def fork_event_based_mpi(file="config/events.csv"):
         )
         dates = [row["s_time"], row["e_time"]]
         rads = row["rads"].split("-")
-        Hopper(base, dates, rads)
+        Hopper(base, dates, rads, ev, row["start"])
     return
 
 
