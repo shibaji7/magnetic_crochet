@@ -19,8 +19,8 @@ import os
 import numpy as np
 import pandas as pd
 import pydarn
-from tqdm import tqdm
 from loguru import logger
+from tqdm import tqdm
 
 
 class Beam(object):
@@ -71,16 +71,14 @@ class Beam(object):
 class Scan(object):
     """Class to hold one scan (multiple beams)"""
 
-    def __init__(self, stime=None, etime=None, s_mode="normal"):
+    def __init__(self, stime=None, etime=None):
         """
         initialize the parameters which will be stored
         stime: start time of scan
         etime: end time of scan
-        s_mode: scan type
         """
         self.stime = stime
         self.etime = etime
-        self.s_mode = s_mode
         self.beams = []
         return
 
@@ -193,14 +191,12 @@ class FetchData(object):
                     ent = -1
         return
 
-    def _parse_data(self, data, s_params, v_params, by, scan_prop):
+    def _parse_data(self, data, s_params, v_params, by):
         """
         Parse data by data type
         data: list of data dict
         params: parameter list to fetch
         by: sort data by beam or scan
-        scan_prop: provide scan properties if by='scan'
-                        {"s_mode": type of scan, "s_time": duration in min}
         """
         _b, _s = [], []
         if self.verbose:
@@ -224,13 +220,13 @@ class FetchData(object):
         if by == "scan":
             if self.verbose:
                 logger.info("Started converting to scan data.")
-            scan, sc = 0, Scan(None, None, scan_prop["s_mode"])
+            scan, sc = 0, Scan(None, None)
             sc.beams.append(_b[0])
             for _ix, d in enumerate(_b[1:]):
                 if d.scan == 1 and d.time != _b[_ix].time:
                     sc.update_time()
                     _s.append(sc)
-                    sc = Scan(None, None, scan_prop["s_mode"])
+                    sc = Scan(None, None)
                     sc.beams.append(d)
                 else:
                     sc.beams.append(d)
@@ -295,9 +291,7 @@ class FetchData(object):
                 eRec = {
                     "time": getattr(b, "time"),
                     "bmnum": getattr(b, "bmnum"),
-                    "eCount": len(getattr(b, "slist"))
-                    if hasattr(b, "slist")
-                    else 0,
+                    "eCount": len(getattr(b, "slist")) if hasattr(b, "slist") else 0,
                 }
                 echoes.append(eRec)
             L = len(_o["slist"])
@@ -342,7 +336,6 @@ class FetchData(object):
     def pandas_to_scans(
         self,
         df,
-        smode="normal",
     ):
         """
         Convert the dataframe to scans
@@ -353,7 +346,7 @@ class FetchData(object):
         for sn in np.unique(df.scnum):
             o = df[df.scnum == sn]
             beams = self.pandas_to_beams(o)
-            sc = Scan(None, None, smode)
+            sc = Scan(None, None)
             sc.beams.extend(beams)
             sc.update_time()
             scans.append(sc)
@@ -362,14 +355,11 @@ class FetchData(object):
     def fetch_data(
         self,
         by="beam",
-        scan_prop={"s_time": 1, "s_mode": "normal"},
     ):
         """
         Fetch data from file list and return the dataset
         params: parameter list to fetch
         by: sort data by beam or scan
-        scan_prop: provide scan properties if by='scan'
-                   {"s_mode": type of scan, "s_time": duration in min}
         """
         data = []
         for f in self.files:
@@ -381,7 +371,7 @@ class FetchData(object):
             records = reader.read_fitacf()
             data += records
         if (by is not None) and (len(data) > 0):
-            data = self._parse_data(data, self.s_params, self.v_params, by, scan_prop)
+            data = self._parse_data(data, self.s_params, self.v_params, by)
             return data
         else:
             return (None, None, False)
@@ -404,6 +394,8 @@ class FetchData(object):
                 fd.records = pd.read_csv(file, parse_dates=["time"])
                 fd.echoRecords = pd.read_csv(efile, parse_dates=["time"])
                 logger.info(f"Data length {rad}: {len(fd.records)}")
+                fd.scans = fd.pandas_to_scans(fd.records)
+                logger.info(f"# Scans {rad}: {len(fd.scans)}")
             else:
                 _, scans, data_exists = fd.fetch_data(by="scan")
                 if data_exists:

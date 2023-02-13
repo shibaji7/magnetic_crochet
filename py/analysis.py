@@ -13,12 +13,15 @@ __status__ = "Research"
 
 import os
 import sys
+import numpy as np
+import datetime as dt
 
 import pandas as pd
 
-sys.path.extend(["py/", "py/fetch/"])
+sys.path.extend(["py/", "py/fetch/", "py/geo/"])
 
 from plotRTI import RTI
+from plotFoV import Fan
 
 
 class Hopper(object):
@@ -63,7 +66,8 @@ class Hopper(object):
         self.darns = FetchData.fetch(base, self.rads, self.dates)
         self.magObs = SuperMAG(self.base, self.dates, stations=mag_stations)
         self.hamSci = HamSci(self.base, self.dates, None)
-        self.GenerateRadarRTIPlots()
+        self.GenerateRadarFoVPlots()
+        self.GenerateRadarRTIPlots()        
         return
 
     def CompileSMJSummaryPlots(
@@ -100,7 +104,20 @@ class Hopper(object):
         """
         Generate FoV summary plots.
         """
-
+        base = self.base + "figures/fan/"
+        os.makedirs(base, exist_ok=True)
+        for rad in self.rads:
+            if hasattr(self.darns[rad], "records") > 0:
+                dmin = np.rint(self.darns[rad].records.scan_time.iloc[0] / 60.0)
+                dN = int(np.rint((self.dates[1] - self.dates[0]).total_seconds() / 60.0))
+                dates = [
+                    self.dates[0] + dt.timedelta(minutes=i * dmin) for i in range(dN)
+                ]
+                for d in dates:
+                    fan = Fan([rad], d)
+                    fan.generate_fov(self.darns)
+                    fan.save(base + f"{rad}-{d.strftime('%H-%M')}.png")
+                    fan.close()
         return
 
 
