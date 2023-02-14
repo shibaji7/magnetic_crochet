@@ -40,6 +40,7 @@ class Hopper(object):
         rads,
         event,
         event_start,
+        event_end,
         uid="shibaji7",
         mag_stations=None,
     ):
@@ -57,6 +58,7 @@ class Hopper(object):
         self.rads = rads
         self.event = event
         self.event_start = event_start
+        self.event_end = event_end
         self.uid = uid
         self.mag_stations = mag_stations
 
@@ -66,8 +68,10 @@ class Hopper(object):
         self.darns = FetchData.fetch(base, self.rads, self.dates)
         self.magObs = SuperMAG(self.base, self.dates, stations=mag_stations)
         self.hamSci = HamSci(self.base, self.dates, None)
+        self.GrepMultiplot()
         self.GenerateRadarFoVPlots()
-        self.GenerateRadarRTIPlots()        
+        self.GenerateRadarRTIPlots()
+        self.stage_analysis()
         return
 
     def CompileSMJSummaryPlots(
@@ -76,7 +80,16 @@ class Hopper(object):
         """
         Create SM/J plots overlaied SD data
         """
-
+        return
+    
+    def GrepMultiplot(self):
+        """
+        Create Latitude longitude dependent plots in Grape
+        """
+        base = self.base + "figures/"
+        os.makedirs(base, exist_ok=True)
+        fname = f"{base}hamsci.png"
+        self.hamSci.setup_plotting(fname)
         return
 
     def GenerateRadarRTIPlots(self):
@@ -119,6 +132,23 @@ class Hopper(object):
                     fan.save(base + f"{rad}-{d.strftime('%H-%M')}.png")
                     fan.close()
         return
+    
+    def stage_analysis(self):
+        """
+        Stage dataset for next analysis
+        """
+        base = "data/stage/{Y}-{m}-{d}-{H}-{M}/".format(
+            Y=self.event.year,
+            m="%02d" % self.event.month,
+            d="%02d" % self.event.day,
+            H="%02d" % self.event.hour,
+            M="%02d" % self.event.minute,
+        )
+        os.makedirs(base, exist_ok=True)
+        for rad in self.rads:
+            self.darns[rad].extract_stagging_data()
+        self.hamSci.extract_stagging_data()
+        return
 
 
 def fork_event_based_mpi(file="config/events.csv"):
@@ -128,7 +158,7 @@ def fork_event_based_mpi(file="config/events.csv"):
     to pre-process and store the
     dataset.
     """
-    o = pd.read_csv(file, parse_dates=["event", "start", "s_time", "e_time"])
+    o = pd.read_csv(file, parse_dates=["event", "start", "end", "s_time", "e_time"])
     for i, row in o.iterrows():
         ev = row["event"]
         base = "data/{Y}-{m}-{d}-{H}-{M}/".format(
@@ -140,7 +170,7 @@ def fork_event_based_mpi(file="config/events.csv"):
         )
         dates = [row["s_time"], row["e_time"]]
         rads = row["rads"].split("-")
-        Hopper(base, dates, rads, ev, row["start"])
+        Hopper(base, dates, rads, ev, row["start"], row["end"])
     return
 
 

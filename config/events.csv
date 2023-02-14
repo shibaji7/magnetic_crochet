@@ -1,2 +1,2 @@
-event,start,fclass,rads,s_time,e_time
-2021-10-28T15:35,2021-10-28T15:17,X1,fhe-fhw-sas-kap,2021-10-28T14,2021-10-28T18
+event,start,end,fclass,rads,s_time,e_time
+2021-10-28T15:35,2021-10-28T15:17,2021-10-28T15:48,X1,fhe-fhw-sas-kap,2021-10-28T15,2021-10-28T16

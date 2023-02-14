@@ -2,13 +2,13 @@
 
 """hamsci.py: module is dedicated to fetch HamSci database."""
 
-__author__ = "Collins, K."
+__author__ = "Chakraborty, S."
 __copyright__ = ""
 __credits__ = []
 __license__ = "MIT"
 __version__ = "1.0."
-__maintainer__ = "Collins, K."
-__email__ = "TODO"
+__maintainer__ = "Chakraborty, S."
+__email__ = ""
 __status__ = "Research"
 
 
@@ -17,6 +17,7 @@ import json
 import os
 from ftplib import FTP
 
+import numpy as np
 import pandas as pd
 import pytz
 from cryptography.fernet import Fernet
@@ -115,13 +116,16 @@ class HamSci(object):
         """
         self.fList = fList
         self.dates = self.parse_dates(dates)
+        self.date_range = [
+            dates[0].to_pydatetime().replace(tzinfo=pytz.utc),
+            dates[1].to_pydatetime().replace(tzinfo=pytz.utc),
+        ]
         self.base = base + "hamsci/"
         if not os.path.exists(self.base):
             os.makedirs(self.base)
         logger.info("Loging into remote FTP")
         self.conn = get_session()
         self.fetch_files()
-        self.load_files()
         if close:
             logger.info("System logging out from remote.")
             self.conn.close()
@@ -171,18 +175,93 @@ class HamSci(object):
                     self.conn.ftp.retrbinary(f"RETR {fn}", fp.write)
         return
 
-    def load_files(self):
+    def load_nodes(self, freq):
         """
         Load files using grape1 library
         """
-        self.inventory = grape1.DataInventory(data_path=self.base)
-        self.inventory.filter(
-            sTime=self.dates[0].astimezone(pytz.utc),
-            eTime=self.dates[1].astimezone(pytz.utc),
+        inv = grape1.DataInventory(data_path=self.base)
+        inv.filter(
+            freq=freq,
+            sTime=self.date_range[0],
+            eTime=self.date_range[1],
         )
-        self.grape_nodes = grape1.GrapeNodes(
-            fpath="config/nodelist.csv", logged_nodes=self.inventory.logged_nodes
+        gn = grape1.GrapeNodes(
+            fpath="config/nodelist.csv", logged_nodes=inv.logged_nodes
         )
+        return inv, gn
+
+    def setup_plotting(
+        self,
+        fname,
+        freq=10e6,
+        solar_loc=(40.6683, -105.0384),
+        color_dct={"ckey": "lon"},
+        xkey="UTC",
+        events=[
+            {"datetime": dt.datetime(2021, 10, 28, 15, 35), "label": "X1 Solar Flare"}
+        ],
+    ):
+        """
+        Plot dataset in multipoint plot
+        """
+        import matplotlib.pyplot as plt
+        plt.style.use(["science", "ieee"])
+        plt.rcParams.update(
+            {
+                "figure.figsize": np.array([8, 6]),
+                "text.usetex": True,
+                "font.family": "sans-serif",
+                "font.sans-serif": [
+                    "Tahoma",
+                    "DejaVu Sans",
+                    "Lucida Grande",
+                    "Verdana",
+                ],
+                "font.size": 10,
+            }
+        )
+            
+        gds = []
+        inv, gn = self.load_nodes(freq)
+        node_nrs = inv.get_nodes()
+        for node in node_nrs:
+            gd = grape1.Grape1Data(
+                node,
+                freq,
+                self.date_range[0],
+                self.date_range[1],
+                inventory=inv,
+                grape_nodes=gn,
+                data_path=self.base,
+            )
+            gd.process_data()
+            gds.append(gd)
+        mp = grape1.GrapeMultiplot(gds)
+        palet = mp.multiplot(
+            "filtered",
+            color_dct=color_dct,
+            xkey=xkey,
+            solar_lat=solar_loc[0],
+            solar_lon=solar_loc[1],
+            events=events,
+            plot_GOES=False,
+            fig_width=8,
+            panel_height=3,
+        )
+        palet["fig"].savefig(fname, bbox_inches="tight")
+        return mp
+    
+    def extract_stagging_data(
+        self, 
+        date_range, 
+        frqs=[], 
+    ):
+        """
+        Extract observations for only analysis
+        """
+        for freq in freqs:
+            inv, gn = self.load_nodes(freq)
+            node_nrs = inv.get_nodes()
         return
 
 

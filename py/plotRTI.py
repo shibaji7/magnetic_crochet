@@ -39,6 +39,7 @@ class RTI(object):
             plt.style.use(["science", "ieee"])
             plt.rcParams.update(
                 {
+                    "figure.figsize": np.array([8, 6]),
                     "text.usetex": True,
                     "font.family": "sans-serif",
                     "font.sans-serif": [
