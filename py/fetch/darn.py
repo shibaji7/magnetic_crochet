@@ -299,7 +299,9 @@ class FetchData(object):
                 if len(_o[p]) < L:
                     l = len(_o[p])
                     _o[p].extend([np.nan] * (L - l))
-        return pd.DataFrame.from_records(_o), pd.DataFrame.from_records(echoes)
+        o, e = pd.DataFrame.from_records(_o), pd.DataFrame.from_records(echoes)
+        o = o[o.slist <= 75]
+        return o, e
 
     def __get_location__(self, row):
         """
@@ -419,3 +421,18 @@ class FetchData(object):
                     logger.info(f"Data does not exists: {rad}!")
             fds[rad] = fd
         return fds
+
+    def extract_stagging_data(self, start, end):
+        """
+        Extracting staging dataset
+        """
+        o = self.records.copy()
+        o = o[(o.time >= start) & (o.time <= end)]
+        etc = dict(
+            rad=self.rad,
+            v_max=o.v.max(),
+            v_min=o.v.min(),
+            v_emd=o.v.median(),
+            v_mean=o.v.mean(),
+        )
+        return etc

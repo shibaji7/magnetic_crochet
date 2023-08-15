@@ -80,7 +80,6 @@ class SuperMAG(object):
                     self.logon, self.dates[0], extent, self.flags, stn
                 )
                 if len(data) > 0:
-                    # if np.mean(data.sza) < 110.0:
                     for comp in ["N", "E", "Z"]:
                         for cord in ["nez", "geo"]:
                             data[comp + "_" + cord] = sm_grabme(data, comp, cord)
@@ -90,7 +89,8 @@ class SuperMAG(object):
                     )
                     self.sm_data = pd.concat([self.sm_data, data])
                 logger.info(f"SM inventory fetch data stats[{stn}]: {status}, idx:{i}")
-            self.sm_data.to_csv(fname, header=True, index=False, float_format="%g")
+            if len(self.sm_data) > 0:
+                self.sm_data.to_csv(fname, header=True, index=False, float_format="%g")
         else:
             logger.info(f"SM inventory is local: {0}")
             self.sm_data = pd.read_csv(fname, parse_dates=["tval"])

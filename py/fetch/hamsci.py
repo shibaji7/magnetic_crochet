@@ -147,10 +147,13 @@ class HamSci(object):
         Compile and store to one location under other files.
         """
         o = []
-        self.conn.ftp.cwd(str(self.dates[0].year))
+        now = dt.date.today()
+        # if now.year > self.dates[0].year:
+        if self.dates[0].year <= 2021:
+            self.conn.ftp.cwd(str(self.dates[0].year))
         files = self.conn.ftp.nlst()
         for file in files:
-            if ".csv" in file:
+            if (".csv" in file) and ("FRQ" in file) and ("T000000Z" in file):
                 info = file.split("_")
                 date = dt.datetime.strptime(info[0].split("T")[0], "%Y-%m-%d")
                 node, frq = info[1], info[-1].replace(".csv", "").replace(
@@ -192,76 +195,66 @@ class HamSci(object):
 
     def setup_plotting(
         self,
-        fname,
         freq=10e6,
-        solar_loc=(40.6683, -105.0384),
-        color_dct={"ckey": "lon"},
-        xkey="UTC",
-        events=[
-            {"datetime": dt.datetime(2021, 10, 28, 15, 35), "label": "X1 Solar Flare"}
-        ],
     ):
         """
         Plot dataset in multipoint plot
         """
-        import matplotlib.pyplot as plt
-        plt.style.use(["science", "ieee"])
-        plt.rcParams.update(
-            {
-                "figure.figsize": np.array([8, 6]),
-                "text.usetex": True,
-                "font.family": "sans-serif",
-                "font.sans-serif": [
-                    "Tahoma",
-                    "DejaVu Sans",
-                    "Lucida Grande",
-                    "Verdana",
-                ],
-                "font.size": 10,
-            }
-        )
-            
-        gds = []
+        self.gds = []
         inv, gn = self.load_nodes(freq)
         node_nrs = inv.get_nodes()
         for node in node_nrs:
-            gd = grape1.Grape1Data(
-                node,
-                freq,
-                self.date_range[0],
-                self.date_range[1],
-                inventory=inv,
-                grape_nodes=gn,
-                data_path=self.base,
-            )
-            gd.process_data()
-            gds.append(gd)
-        mp = grape1.GrapeMultiplot(gds)
-        palet = mp.multiplot(
-            "filtered",
-            color_dct=color_dct,
-            xkey=xkey,
-            solar_lat=solar_loc[0],
-            solar_lon=solar_loc[1],
-            events=events,
-            plot_GOES=False,
-            fig_width=8,
-            panel_height=3,
-        )
-        palet["fig"].savefig(fname, bbox_inches="tight")
-        return mp
-    
+            try:
+                gd = grape1.Grape1Data(
+                    node,
+                    freq,
+                    self.date_range[0],
+                    self.date_range[1],
+                    inventory=inv,
+                    grape_nodes=gn,
+                    data_path=self.base,
+                )
+                gd.process_data()
+                self.gds.append(gd)
+            except:
+                import traceback
+
+                traceback.print_exc()
+        return self.gds
+
     def extract_stagging_data(
-        self, 
-        date_range, 
-        frqs=[], 
+        self,
     ):
         """
         Extract observations for only analysis
         """
-        for freq in freqs:
-            inv, gn = self.load_nodes(freq)
-            node_nrs = inv.get_nodes()
+        sci = []
+        for gd in self.gds:
+            gd.df_params = gd.df_params | gd.meta
+            sci.append(gd.df_params)
+        return sci
+
+    def extract_parameters(self, flare_timings, gds=None):
+        """
+        Extract Doppler Flash parameters
+        """
+        fl_start, fl_peak, fl_end = (
+            flare_timings[0],
+            flare_timings[1],
+            flare_timings[2],
+        )
+        gds = gds if gds else self.gds
+        for gd in gds:
+            params = dict()
+            o = gd.data["filtered"]["df"]
+            del_t = (o.UTC[1] - o.UTC[0]).total_seconds()
+            rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
+            fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
+            params["rise_area"] = np.trapz(rise.Freq, dx=del_t)
+            params["fall_area"] = np.trapz(fall.Freq, dx=del_t)
+            params["peak"] = rise.Freq.max()
+            setattr(gd, "df_params", params)
+        self.gds = gds
         return
 
 
