@@ -460,6 +460,8 @@ def HamSciParamTS(
     ax0.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
     ax0.set_ylabel(r"Doppler [Hz]", fontdict={"size": 11, "fontweight": "bold"})
     ax0.set_xlim(drange)
+    ax0.text(0.1, 0.9, gds[index].meta["call_sign"] + "/" +str(gds[index].meta["node"]),
+    ha="left", va="center", transform=ax0.transAxes)
 
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
     return
