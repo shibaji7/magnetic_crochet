@@ -117,8 +117,8 @@ class HamSci(object):
         self.fList = fList
         self.dates = self.parse_dates(dates)
         self.date_range = [
-            dates[0].to_pydatetime().replace(tzinfo=pytz.utc),
-            dates[1].to_pydatetime().replace(tzinfo=pytz.utc),
+            dates[0].replace(tzinfo=pytz.utc),
+            dates[1].replace(tzinfo=pytz.utc),
         ]
         self.base = base + "hamsci/"
         if not os.path.exists(self.base):
@@ -136,8 +136,8 @@ class HamSci(object):
         Parsing dates
         """
         da = [
-            dates[0].to_pydatetime().replace(minute=0, hour=0, second=0),
-            dates[1].to_pydatetime().replace(minute=0, hour=0, second=0),
+            dates[0].replace(minute=0, hour=0, second=0),
+            dates[1].replace(minute=0, hour=0, second=0),
         ]
         return da
 

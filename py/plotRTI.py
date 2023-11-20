@@ -465,3 +465,68 @@ def HamSciParamTS(
 
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
     return
+
+
+def joyplot(
+    gds,
+    filepath,
+    flare_timings,
+    vlines=[],
+    colors=[],
+    drange=[],
+    offset=0.75,
+):
+    """
+    Create a Joyplot using dataset
+    """
+    fl_start, fl_peak, fl_end = (
+        flare_timings[0],
+        flare_timings[1],
+        flare_timings[2],
+    )
+    plt.style.use(["science", "ieee"])
+    plt.rcParams.update(
+        {
+            "figure.figsize": np.array([8, 6]),
+            "text.usetex": True,
+            "font.family": "sans-serif",
+            "font.sans-serif": [
+                "Tahoma",
+                "DejaVu Sans",
+                "Lucida Grande",
+                "Verdana",
+            ],
+            "font.size": 10,
+        }
+    )
+    fig = plt.figure(figsize=(8, 3), dpi=200)
+    ax0 = fig.add_subplot(111)
+    ax0.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 10))
+    ax0.xaxis.set_major_locator(major_locator)
+    for v, c in zip(vlines, colors):
+        ax0.axvline(v, color=c, ls="--", lw=0.6)
+    
+    for i, gd in enumerate(gds):
+        o = gd.data["filtered"]["df"]
+        ax0.plot(o.UTC, (i*offset)+o.Freq, ls="-", lw=0.8, color="k")
+        rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
+        fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
+        ax0.fill_between(
+            rise.UTC,
+            y1=(i*offset)+rise.Freq,
+            y2=(i*offset),
+            color="r",
+        )
+        ax0.fill_between(
+            fall.UTC,
+            y1=(i*offset)+fall.Freq,
+            y2=(i*offset),
+            color="green",
+        )
+    ax0.set_yticklabels([])
+    ax0.set_xlim(drange)
+    ax0.set_xlabel("Time, UT")
+    ax0.set_ylabel("Doppler, Hz")
+    fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
+    return
