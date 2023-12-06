@@ -113,6 +113,11 @@ class FlareTS(object):
         etc = dict(
             rise_time=np.nan,
             fall_time=np.nan,
+            peak_of_dI=dict(
+                xray_a=np.diff(self.dfs["goes"].xrsa).max(), # Store derivative
+                xray_b=np.diff(self.dfs["goes"].xrsb).max(),
+                ESPquad=np.diff(self.dfs["eve"]["0.1-7ESPquad"]).max(),
+            ),
             peaks=dict(
                 xray_a=self.dfs["goes"].xrsa.max(),
                 xray_b=self.dfs["goes"].xrsb.max(),

@@ -33,8 +33,8 @@ def run_event(idx, file="config/events.csv"):
     row = o.iloc[idx]
     ev = row["event"]
     row["e_time"], row["s_time"] = (
-        dt.datetime.strptime(row["e_time"], "%Y-%m-%dT%H"),
-        dt.datetime.strptime(row["s_time"], "%Y-%m-%dT%H")
+        pd.to_datetime(row["e_time"]),
+        pd.to_datetime(row["s_time"])
     )
     base = "data/{Y}-{m}-{d}-{H}-{M}/".format(
         Y=ev.year,

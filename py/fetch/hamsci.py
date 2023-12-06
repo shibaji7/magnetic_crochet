@@ -266,3 +266,4 @@ if __name__ == "__main__":
     fList = [10, 5, 2.5]
     base = "data/2021-10-28/"
     HamSci(base, dates, fList)
+    # conn = get_session(isclose=True)
