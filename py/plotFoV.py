@@ -30,7 +30,7 @@ class Fan(object):
         self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo", science=True
     ):
         if science:
-            plt.style.use(["science", "ieee"])
+            #plt.style.use(["science", "ieee"])
             plt.rcParams.update(
                 {
                     "text.usetex": True,

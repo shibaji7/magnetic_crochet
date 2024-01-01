@@ -23,7 +23,7 @@ from pysolar.solar import get_altitude_fast
 
 def setup(science=True):
     if science:
-        plt.style.use(["science", "ieee"])
+        #plt.style.use(["science", "ieee"])
         plt.rcParams.update(
             {
                 "figure.figsize": np.array([8, 6]),
@@ -287,7 +287,7 @@ class RTI(object):
 
 def GOESPlot(time, xl, xs, filepath, vlines=[], colors=[], drange=[]):
     """ """
-    plt.style.use(["science", "ieee"])
+    #plt.style.use(["science", "ieee"])
     plt.rcParams.update(
         {
             "figure.figsize": np.array([8, 6]),
@@ -343,7 +343,7 @@ def HamSciTS(
     drange=[],
 ):
     """ """
-    plt.style.use(["science", "ieee"])
+    #plt.style.use(["science", "ieee"])
     plt.rcParams.update(
         {
             "figure.figsize": np.array([8, 6]),
@@ -484,7 +484,7 @@ def joyplot(
         flare_timings[1],
         flare_timings[2],
     )
-    plt.style.use(["science", "ieee"])
+    #plt.style.use(["science", "ieee"])
     plt.rcParams.update(
         {
             "figure.figsize": np.array([8, 6]),
