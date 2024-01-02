@@ -407,7 +407,7 @@ def HamSciParamTS(
         flare_timings[1],
         flare_timings[2],
     )
-    plt.style.use(["science", "ieee"])
+    #plt.style.use(["science", "ieee"])
     plt.rcParams.update(
         {
             "figure.figsize": np.array([8, 6]),

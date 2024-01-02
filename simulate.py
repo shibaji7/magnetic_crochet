@@ -44,7 +44,8 @@ def run_event(idx, file="config/events.csv"):
         M="%02d" % ev.minute,
     )
     dates = [row["s_time"], row["e_time"]]
-    rads = row["rads"].split("-")
+    row["rads"] = row["rads"].replace(" ", "")
+    rads = row["rads"].split("-") if len(str(row["rads"])) > 0 else []
     Hopper(base, dates, rads, ev, row["start"], row["end"])
     return
 
