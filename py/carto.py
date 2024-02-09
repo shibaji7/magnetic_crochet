@@ -12,6 +12,7 @@ __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
 
+
 import datetime as dt
 
 import aacgmv2
@@ -20,11 +21,12 @@ import matplotlib.pyplot as plt
 import numpy
 import numpy as np
 import pydarn
-import utils
 from cartopy.mpl.geoaxes import GeoAxes
+from descartes import PolygonPatch
 from matplotlib.projections import register_projection
 from rad_fov import CalcFov
 from shapely.geometry import LineString, MultiLineString, Polygon, mapping
+from cartopy.feature.nightshade import Nightshade
 
 
 class SDCarto(GeoAxes):
@@ -65,6 +67,10 @@ class SDCarto(GeoAxes):
         super().__init__(map_projection=map_projection, *args, **kwargs)
         return
 
+    def draw_DN_terminator(self, date):
+        self.add_feature(Nightshade(date, alpha=0.2), dn_term=True)
+        return
+
     def overaly_coast_lakes(self, resolution="50m", color="black", **kwargs):
         """
         Overlay AACGM coastlines and lakes
@@ -87,7 +93,7 @@ class SDCarto(GeoAxes):
         )
         return self.add_feature(feature, **kwargs)
 
-    def add_feature(self, feature, **kwargs):
+    def add_feature(self, feature, dn_term=False, **kwargs):
         # Now we"ll set facecolor as None because aacgm doesn"t close
         # continents near equator and it turns into a problem
         if "edgecolor" not in kwargs:
@@ -96,7 +102,7 @@ class SDCarto(GeoAxes):
             print(
                 "manually setting facecolor keyword to none as aacgm fails for fill! want to know why?? think about equator!"
             )
-        kwargs["facecolor"] = "none"
+        kwargs["facecolor"] = "k" if dn_term else "none"
         if self.coords == "geo":
             super().add_feature(feature, **kwargs)
         else:
@@ -196,7 +202,7 @@ class SDCarto(GeoAxes):
                     _pro[1],
                     r"$%s^{\circ}$" % str(lat_arr[_np]),
                     **kwargs,
-                    alpha=0.5
+                    alpha=0.5,
                 )
             else:
                 out_extent_lats = True
@@ -277,7 +283,7 @@ class SDCarto(GeoAxes):
                 ha=ha,
                 va=va,
                 **kwargs,
-                alpha=0.5
+                alpha=0.5,
             )
         return
 
@@ -309,7 +315,7 @@ class SDCarto(GeoAxes):
         zorder=2,
         markerColor="k",
         markerSize=2,
-        fontSize="xx-small",
+        fontSize="x-small",
         font_color="k",
         xOffset=5,
         yOffset=-1.5,
@@ -338,12 +344,18 @@ class SDCarto(GeoAxes):
         if annotate:
             rad = hdw.abbrev
             if rad in nearby_rad[0]:
-                xOff, ha = 1.5 if not xOffset else xOffset, 0
+                xOff, yOff = (
+                    1.5 if not xOffset else xOffset,
+                    0 if not yOffset else yOffset,
+                )
             elif rad in nearby_rad[1]:
-                xOff, ha = -1.5 if not xOffset else xOffset, 1
+                xOff, yOff = (
+                    -1.5 if not xOffset else -xOffset,
+                    1 if not yOffset else yOffset,
+                )
             else:
-                xOff, ha = 0.0, 0.5
-            lat, lon = hdw.geographic.lat + yOffset, hdw.geographic.lon + xOffset
+                xOff, yOff = xOffset, yOffset
+            lat, lon = hdw.geographic.lat + yOff, hdw.geographic.lon + xOff
             if "aacgm" in self.coords:
                 lat, lon = self.to_aagcm(lat, lon)
             x, y = self.projection.transform_point(lon, lat, src_crs=tx)
@@ -363,13 +375,13 @@ class SDCarto(GeoAxes):
         self,
         rad,
         tx=cartopy.crs.PlateCarree(),
-        maxGate=90,
+        maxGate=75,
         beamLimits=None,
-        fovColor=None,
-        fovAlpha=0.2,
+        fovColor="k",
+        fovAlpha=0.0,
         zorder=1,
         lineColor="k",
-        lineWidth=0.5,
+        lineWidth=0.4,
         ls="-",
         model="IS",
         fov_dir="front",
@@ -437,7 +449,7 @@ class SDCarto(GeoAxes):
         df,
         tx,
         fm=cartopy.crs.Geodetic(),
-        p_max=36,
+        p_max=39,
         p_min=0,
         p_name="p_l",
         label="Power [dB]",
@@ -447,7 +459,7 @@ class SDCarto(GeoAxes):
         scan_time=None,
         model="IS",
         fov_dir="front",
-        **kwargs
+        **kwargs,
     ):
         """Overlay radar Data"""
         scan_time = scan_time if scan_time else np.rint(df.scan_time.tolist()[0] / 60.0)
@@ -465,7 +477,7 @@ class SDCarto(GeoAxes):
             # lats, lons = pydarn.Coords.GEOGRAPHIC(hdw.stid)
             # lats, lons = lats.T, lons.T
             lats, lons = fov.latCenter, fov.lonCenter
-            Xb, Yg, Px = utils.get_gridded_parameters(
+            Xb, Yg, Px = tidUtils.get_gridded_parameters(
                 df, xparam="bmnum", yparam="slist", zparam=p_name
             )
             Xb, Yg = Xb.astype(int), Yg.astype(int)
@@ -482,9 +494,10 @@ class SDCarto(GeoAxes):
                 cmap=cmap,
                 vmax=p_max,
                 vmin=p_min,
-                s=1.2,
-                alpha=0.6,
-                **kwargs
+                s=0.3,
+                marker="o",
+                alpha=0.4,
+                **kwargs,
             )
             if cbar:
                 self._add_colorbar(im, label=label)
@@ -498,6 +511,60 @@ class SDCarto(GeoAxes):
         cpos = [1.04, 0.1, 0.025, 0.8]
         cax = self.inset_axes(cpos, transform=self.transAxes)
         cb = fig.colorbar(im, ax=self, cax=cax)
+        cb.set_label(label)
+        return
+
+    def overlay_tec(
+        self,
+        lats,
+        lons,
+        tec,
+        tx,
+        fm=cartopy.crs.Geodetic(),
+        p_max=0.15,
+        p_min=-0.15,
+        label="dTEC [TECu]",
+        cmap=plt.cm.Greys,
+        hcbar=True,
+        **kwargs,
+    ):
+        """Overlay TEC Data"""
+        XYZ = tx.transform_points(fm, lons, lats)
+        im = self.scatter(
+            XYZ[:, 0],
+            XYZ[:, 1],
+            c=tec,
+            transform=tx,
+            cmap=cmap,
+            vmax=p_max,
+            vmin=p_min,
+            s=0.1,
+            marker="o",
+            alpha=1.0,
+            **kwargs,
+        )
+        if hcbar:
+            self._add_hcolorbar(im, label)
+        return
+
+    def _add_hcolorbar(self, im, label=""):
+        """Add a colorbar to the right of an axis."""
+        fig = self.get_figure()
+        pos = self.get_position()
+        cpos = [
+            pos.x0 + 0.3 * pos.width,
+            pos.y0 - 0.6 * pos.height,
+            pos.width * 0.5,
+            0.02,
+        ]  # this list defines (left, bottom, width, height)
+        cax = self.inset_axes(cpos, transform=self.transAxes)
+        cb = fig.colorbar(
+            im,
+            ax=self,
+            cax=cax,
+            spacing="uniform",
+            orientation="horizontal",
+        )
         cb.set_label(label)
         return
 

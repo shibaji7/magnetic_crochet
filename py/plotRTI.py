@@ -139,7 +139,7 @@ class RTI(object):
         self.fig = plt.figure(figsize=(6, 3 * num_subplots), dpi=180)
         if fig_title:
             plt.suptitle(
-                fig_title, x=0.075, y=0.99, ha="left", fontweight="bold", fontsize=12
+                fig_title, x=0.075, y=0.92, ha="left", fontweight="bold", fontsize=12
             )
         self.angle_th = angle_th
         return
@@ -174,8 +174,8 @@ class RTI(object):
         ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
         if (self.drange[1] - self.drange[0]).total_seconds() / 3600 <= 1.0:
             major_locator = mdates.MinuteLocator(byminute=range(0, 60, 10))
-        elif (self.drange[1] - self.drange[0]).total_seconds() / 3600 <= 4.0:
-            major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
+        elif (self.drange[1] - self.drange[0]).total_seconds() / 3600 <= 6.0:
+            major_locator = mdates.HourLocator(byhour=range(0, 24, 1))
         else:
             major_locator = mdates.HourLocator(byhour=range(0, 24, 4))
         ax.xaxis.set_major_locator(major_locator)
@@ -475,6 +475,7 @@ def joyplot(
     colors=[],
     drange=[],
     offset=0.75,
+    ccolors = []
 ):
     """
     Create a Joyplot using dataset
@@ -502,31 +503,112 @@ def joyplot(
     fig = plt.figure(figsize=(8, 3), dpi=200)
     ax0 = fig.add_subplot(111)
     ax0.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
-    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 10))
+    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
     ax0.xaxis.set_major_locator(major_locator)
     for v, c in zip(vlines, colors):
-        ax0.axvline(v, color=c, ls="--", lw=0.6)
-    
+        ax0.axvline(v, color=c, ls="--", lw=0.4)
+    ccolors = ccolors if len(ccolors)>0 else ["k"]*len(gds)
     for i, gd in enumerate(gds):
         o = gd.data["filtered"]["df"]
-        ax0.plot(o.UTC, (i*offset)+o.Freq, ls="-", lw=0.8, color="k")
+        ax0.plot(o.UTC, o.Freq, ls="-", lw=0.8, color=ccolors[i], label=f"{gd.meta['call_sign']}")
         rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
         fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
-        ax0.fill_between(
-            rise.UTC,
-            y1=(i*offset)+rise.Freq,
-            y2=(i*offset),
-            color="r",
-        )
-        ax0.fill_between(
-            fall.UTC,
-            y1=(i*offset)+fall.Freq,
-            y2=(i*offset),
-            color="green",
-        )
-    ax0.set_yticklabels([])
+        # ax0.fill_between(
+        #     rise.UTC,
+        #     y1=(i*offset)+rise.Freq,
+        #     y2=(i*offset),
+        #     color="r",
+        #     alpha=0.5,
+        # )
+        # ax0.fill_between(
+        #     fall.UTC,
+        #     y1=(i*offset)+fall.Freq,
+        #     y2=(i*offset),
+        #     color="green",
+        #     alpha=0.5,
+        #     label=f"{gd.meta['call_sign']}"
+        # )
+    ax0.legend(loc=2)
+    ax0.text(0.05, 1.05, r"HamSCI, $f_0=$10 MHz", ha="left", va="center", transform=ax0.transAxes)
+    #ax0.set_yticklabels([])
+    ax0.set_ylim(-1, 3)
+    ax0.axhline(0, ls="--", lw=0.4, color="k")
     ax0.set_xlim(drange)
     ax0.set_xlabel("Time, UT")
     ax0.set_ylabel("Doppler, Hz")
+    fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
+    print(gd.meta)
+    return
+
+
+def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[], drange=[]):
+    """ """
+    #plt.style.use(["science", "ieee"])
+    plt.rcParams.update(
+        {
+            "figure.figsize": np.array([8, 6]),
+            "text.usetex": True,
+            "font.family": "sans-serif",
+            "font.sans-serif": [
+                "Tahoma",
+                "DejaVu Sans",
+                "Lucida Grande",
+                "Verdana",
+            ],
+            "font.size": 10,
+        }
+    )
+    drange = drange if len(drange) == 2 else [time[0], time[-1]]
+    fig = plt.figure(figsize=(6, 6), dpi=180)
+    ax = fig.add_subplot(211)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.HourLocator(byhour=range(0, 24, 1))
+    ax.xaxis.set_major_locator(major_locator)
+    ax.set_xlabel("", fontdict={"size": 11, "fontweight": "bold"})
+    ax.set_xlim(drange)
+    ax.set_ylim(1e-8, 1e-3)
+    for v, c in zip(vlines, colors):
+        ax.axvline(v, color=c, ls="--", lw=0.6)
+    ax.axhline(1e-6, color="k", ls=":", lw=0.6)
+    ax.text(time[-1], 1e-6, "C", ha="left", va="center")
+    ax.axhline(1e-5, color="k", ls=":", lw=0.6)
+    ax.text(time[-1], 1e-5, "M", ha="left", va="center")
+    ax.axhline(1e-4, color="k", ls=":", lw=0.6)
+    ax.text(time[-1], 1e-4, "X", ha="left", va="center")
+    ax.set_ylabel(
+        r"Irradiance [$Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
+    )
+    N = int(len(time) / 1)
+    ax.semilogy(
+        time[:N], xl[:N], color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
+    )
+    ax.semilogy(
+        time[:N], xs[:N], color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
+    )
+    ax.text(1.07, 0.99, "GOES X-rays", ha="right", va="top", transform=ax.transAxes, rotation=90)
+    ax.set_xticklabels([])
+    ax.text(0.05, 0.95, "(a)", ha="left", va="center", transform=ax.transAxes)
+    ax.legend(loc=1)
+    ax.text(0.05, 1.05, "Class: X2.8", ha="left", va="center", transform=ax.transAxes)
+
+
+    ax = fig.add_subplot(212)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.HourLocator(byhour=range(0, 24, 1))
+    ax.xaxis.set_major_locator(major_locator)
+    ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
+    ax.set_xlim(drange)
+    for v, c in zip(vlines, colors):
+        ax.axvline(v, color=c, ls="--", lw=0.6)
+    ax.set_ylabel(
+        r"Irradiance (0.1-7 nm) [$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
+    )
+    N = int(len(time) / 1)
+    ax.plot(
+        time[:N], xl[:N]*1e3, color="k", ls="-", lw=1,
+    )
+    ax.text(1.07, 0.99, "SDO EUV", ha="right", va="top", transform=ax.transAxes, rotation=90)
+    ax.text(0.05, 0.95, "(b)", ha="left", va="center", transform=ax.transAxes)
+    fig.subplots_adjust(wspace=0.2, hspace=0.2)
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
     return

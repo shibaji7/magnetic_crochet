@@ -65,7 +65,7 @@ class Fan(object):
             if fig_title
             else f"{self.date_string()}",
             x=0.1,
-            y=0.82,
+            y=0.85,
             ha="left",
             fontweight="bold",
             fontsize=8,
@@ -76,6 +76,7 @@ class Fan(object):
         """
         Instatitate figure and axes labels
         """
+        from carto import SDCarto
         self._num_subplots_created += 1
         proj = cartopy.crs.Stereographic(central_longitude=-90.0, central_latitude=45.0)
         ax = self.fig.add_subplot(
@@ -86,7 +87,7 @@ class Fan(object):
             plot_date=self.date,
         )
         ax.overaly_coast_lakes(lw=0.4, alpha=0.4)
-        ax.set_extent([-130, -50, 30, 70], crs=cartopy.crs.PlateCarree())
+        ax.set_extent([-130, -50, 20, 80], crs=cartopy.crs.PlateCarree())
         plt_lons = np.arange(-180, 181, 15)
         mark_lons = np.arange(-180, 181, 30)
         plt_lats = np.arange(40, 90, 10)
@@ -96,8 +97,8 @@ class Fan(object):
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
         gl.n_steps = 90
-        ax.mark_latitudes(plt_lats, fontsize="small", color="darkred")
-        ax.mark_longitudes(mark_lons, fontsize="small", color="darkblue")
+        #ax.mark_latitudes(plt_lats, fontsize="small", color="darkred")
+        #ax.mark_longitudes(mark_lons, fontsize="small", color="darkblue")
         self.proj = proj
         self.geo = cartopy.crs.PlateCarree()
         ax.text(
@@ -110,6 +111,18 @@ class Fan(object):
             fontsize="small",
             rotation=90,
         )
+        ax.draw_DN_terminator(self.date)
+        gl = ax.gridlines(crs=cartopy.crs.PlateCarree(), linewidth=0.8, color="r")
+        gl.xlocator = mticker.FixedLocator([-72.2])
+        gl.ylocator = mticker.FixedLocator([])
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+
+        gl = ax.gridlines(crs=cartopy.crs.PlateCarree(), linewidth=0.8, color="orange")
+        gl.xlocator = mticker.FixedLocator([-102])
+        gl.ylocator = mticker.FixedLocator([])
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
         return ax
 
     def date_string(self, label_style="web"):
@@ -120,15 +133,15 @@ class Fan(object):
         date_str = "{:{dd} {tt}} UT".format(stime, dd=dfmt, tt=tfmt)
         return date_str
 
-    def generate_fov(self, fds, beams=[]):
+    def generate_fov(self, beams=[]):
         """
         Generate plot with dataset overlaid
         """
         ax = self.add_axes()
         for rad in self.rads:
-            ax.overlay_radar(rad)
+            ax.overlay_radar(rad, font_color="b")
             ax.overlay_fov(rad)
-            ax.overlay_data(rad, fds[rad].records, self.proj)
+            #ax.overlay_data(rad, fds[rad].records, self.proj)
             if beams and len(beams) > 0:
                 [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="--") for b in beams]
         return
