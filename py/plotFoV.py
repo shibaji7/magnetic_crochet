@@ -133,11 +133,19 @@ class Fan(object):
         date_str = "{:{dd} {tt}} UT".format(stime, dd=dfmt, tt=tfmt)
         return date_str
 
-    def generate_fov(self, beams=[]):
+    def generate_fov(self, stations, beams=[]):
         """
         Generate plot with dataset overlaid
         """
         ax = self.add_axes()
+        for k in stations.keys():
+            if k=="WWV":
+                ax.overlay_station(
+                    stations[k], markerColor="darkred", 
+                    zorder=4, markerSize=10, drawline=False
+                )
+            else:
+                ax.overlay_station(stations[k], markerSize=5)
         for rad in self.rads:
             ax.overlay_radar(rad, font_color="b")
             ax.overlay_fov(rad)

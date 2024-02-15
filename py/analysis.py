@@ -14,6 +14,7 @@ __status__ = "Research"
 import datetime as dt
 import os
 import sys
+import utils
 
 import numpy as np
 import pandas as pd
@@ -164,82 +165,86 @@ class Stats(object):
         import matplotlib as mpl
         import matplotlib.dates as mdates
         import matplotlib.pyplot as plt
-        fig, axs = plt.subplots(dpi=300, figsize=(6,6), nrows=2, ncols=2, sharey=True)
+        fig, axs = plt.subplots(dpi=300, figsize=(12,3), nrows=1, ncols=4, sharey=True)
         params = [
-            ["sza", "flare_peaks_xray_b"], 
-            ["flare_peaks_xray_a", "flare_peaks_ESPquad"]
-        ]
-        y_param, label = "area", "Area"
-        i = 0
-        for param, axm in zip(params, axs):
-            for p, ax in zip(param, axm): 
-                e = events.copy()
-                fm = fit_OLS(events[y_param], events[p], [uq])
-                e["fit"], e["ub"], e["lb"] = (
-                    fm["y_hat"],
-                    fm[uq]["y_upper"],
-                    fm[uq]["y_lower"],
-                )
-                e = e.sort_values(by=p)
-                ax.scatter(events[p], events[y_param], s=0.8, color="k", label="Observations")
-                ax.plot(e[p], e.fit, "r-", lw=1.2, label="Best Fit")
-                ax.plot(e[p], e.ub, "b-", lw=1.2, label=r"1-$\sigma$")
-                ax.plot(e[p], e.lb, "b-", lw=1.2)
-                ax.text(
-                    0.9, 0.95, 
-                    r"$\rho$=%.2f$\times 10^{-2}$"%(fm["results"].params[1]*1e2), 
-                    ha="right", va="center", transform=ax.transAxes
-                )
-                ax.set_yscale("log")
-                if i==0:
-                    ax.legend(loc=3)
-                i+=1
-        axs[0,0].set_ylabel(f"Doppler/{label} (Hz)")
-        axs[1,0].set_ylabel(f"Doppler/{label} (Hz)")
-        axs[0,0].set_xlabel("SZA (Deg)")
-        axs[0,1].set_xlabel(r"X-ray, B ($\times 10^{-5}$ $Wm^{-2}$)")
-        axs[1,0].set_xlabel(r"X-ray, A ($\times 10^{-6}$ $Wm^{-2}$)")
-        axs[1,1].set_xlabel(r"EPS, 0.1-7 nm $\times 10^{-3}$ $Wm^{-2}$)")
-        fig.subplots_adjust(wspace=0.15, hspace=0.3)
-        fig.savefig(fname, bbox_inches="tight")
-
-        fig, axs = plt.subplots(dpi=300, figsize=(6,6), nrows=2, ncols=2, sharey=True)
-        params = [
-            ["sza", "flare_peaks_xray_b_dI"], 
-            ["flare_peaks_xray_a_dI", "flare_peaks_ESPquad_dI"]
+            "sza", "flare_peaks_xray_a", 
+            "flare_peaks_xray_b", "flare_peaks_ESPquad"
         ]
         y_param, label = "peak", "Peak"
         i = 0
-        for param, axm in zip(params, axs):
-            for p, ax in zip(param, axm): 
-                e = events.copy()
-                fm = fit_OLS(events[y_param], np.log10(events[p]), [uq])
-                e["fit"], e["ub"], e["lb"] = (
-                    fm["y_hat"],
-                    fm[uq]["y_upper"],
-                    fm[uq]["y_lower"],
-                )
-                e = e.sort_values(by=p)
-                ax.scatter(events[p], events[y_param], s=0.8, color="k", label="Observations")
-                ax.plot(e[p], e.fit, "r-", lw=1.2, label="Best Fit")
-                ax.plot(e[p], e.ub, "b-", lw=1.2, label=r"1-$\sigma$")
-                ax.plot(e[p], e.lb, "b-", lw=1.2)
-                ax.text(
-                    0.9, 0.95, 
-                    r"$\rho$=%.2f$\times 10^{-2}$"%(fm["results"].params[1]*1e2), 
-                    ha="right", va="center", transform=ax.transAxes
-                )
-                ax.set_yscale("log")
-                if i==0:
-                    ax.legend(loc=3)
-                else: ax.set_xscale("log")
-                i+=1
-        axs[0,0].set_ylabel(f"Doppler/{label} (Hz)")
-        axs[1,0].set_ylabel(f"Doppler/{label} (Hz)")
-        axs[0,0].set_xlabel("SZA (Deg)")
-        axs[0,1].set_xlabel(r"X-ray (dI/dt), B ($\times 10^{-5}$ $Wm^{-2}$)")
-        axs[1,0].set_xlabel(r"X-ray (dI/dt), A ($\times 10^{-6}$ $Wm^{-2}$)")
-        axs[1,1].set_xlabel(r"EPS (dI/dt), 0.1-7 nm $\times 10^{-3}$ $Wm^{-2}$)")
+        for p, ax in zip(params, axs):
+            e = events.copy()
+            fm = fit_OLS(events[y_param], events[p], [uq])
+            x, y = np.array(events[y_param]), np.log10(events[p])
+            nmi = utils.compute_normalized_MI(x, y, state=0)
+            print(f"{p}-------------",nmi)
+
+            e["fit"], e["ub"], e["lb"] = (
+                fm["y_hat"],
+                fm[uq]["y_upper"],
+                fm[uq]["y_lower"],
+            )
+            e = e.sort_values(by=p)
+            ax.scatter(events[p], events[y_param], s=0.8, color="k", label="Observations")
+            ax.plot(e[p], e.fit, "r-", lw=1.2, label="Best Fit")
+            ax.plot(e[p], e.ub, "b-", lw=1.2, label=r"1-$\sigma$")
+            ax.plot(e[p], e.lb, "b-", lw=1.2)
+            ax.text(
+                0.9, 1.05, 
+                r"$\mathcal{N}$=%.2f"%(nmi),#fm["results"].params[1]*1e2), 
+                ha="right", va="center", transform=ax.transAxes
+            )
+            ax.set_yscale("log")
+            if i==0:
+                ax.legend(loc=3)
+            i+=1
+        axs[0].set_ylabel(fr"Doppler/{label}, $D_H$ (Hz)")
+        #axs[1,0].set_ylabel(f"Doppler/{label} (Hz)")
+        axs[0].set_xlabel("SZA (Deg)")
+        axs[2].set_xlabel(r"X-ray [$\lambda_1$] ($\times 10^{-5}$ $Wm^{-2}$)")
+        axs[1].set_xlabel(r"X-ray [$\lambda_0$] ($\times 10^{-6}$ $Wm^{-2}$)")
+        axs[3].set_xlabel(r"EUV [0.1-7 nm] $\times (10^{-3}$ $Wm^{-2}$)")
+        fig.subplots_adjust(wspace=0.15, hspace=0.3)
+        fig.savefig(fname, bbox_inches="tight")
+
+        fig, axs = plt.subplots(dpi=300, figsize=(9,3), nrows=1, ncols=3, sharey=True)
+        params = [
+            "flare_peaks_xray_a_dI", 
+            "flare_peaks_xray_b_dI", "flare_peaks_ESPquad_dI"
+        ]
+        y_param, label = "peak", "Peak"
+        i = 0
+        for p, ax in zip(params, axs): 
+            e = events.copy()
+            fm = fit_OLS(events[y_param], np.log10(events[p]), [uq])
+            x, y = np.array(events[y_param]), np.log10(events[p])
+            nmi = utils.compute_normalized_MI(x, y, state=0)
+            print(f"{p}-------------",nmi)
+            
+            e["fit"], e["ub"], e["lb"] = (
+                fm["y_hat"],
+                fm[uq]["y_upper"],
+                fm[uq]["y_lower"],
+            )
+            e = e.sort_values(by=p)
+            ax.scatter(events[p], events[y_param], s=0.8, color="k", label="Observations")
+            ax.plot(e[p], e.fit, "r-", lw=1.2, label="Best Fit")
+            ax.plot(e[p], e.ub, "b-", lw=1.2, label=r"1-$\sigma$")
+            ax.plot(e[p], e.lb, "b-", lw=1.2)
+            ax.text(
+                0.9, 1.05, 
+                r"$\mathcal{N}$=%.2f"%(nmi), 
+                ha="right", va="center", transform=ax.transAxes
+            )
+            ax.set_yscale("log")
+            if i==0:
+                ax.legend(loc=3)
+            #else: ax.set_xscale("log")
+            i+=1
+        axs[0].set_ylabel(fr"Doppler/{label}, $D_H$ (Hz)")
+        axs[1].set_xlabel(r"$\frac{\partial\Phi_{X}}{\partial t}$ [$\lambda_1$] ($\times 10^{-5}$ $Wm^{-2}$)")
+        axs[0].set_xlabel(r"$\frac{\partial\Phi_{X}}{\partial t}$ [$\lambda_0$] ($\times 10^{-6}$ $Wm^{-2}$)")
+        axs[2].set_xlabel(r"$\frac{\partial\Phi_{EUV}}{\partial t}$ [0.1-7 nm] ($\times 10^{-3}$ $Wm^{-2}$)")
         fig.subplots_adjust(wspace=0.15, hspace=0.3)
         fig.savefig(fname.replace(".","_dI."), bbox_inches="tight")
         return

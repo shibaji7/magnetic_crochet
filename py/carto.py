@@ -25,6 +25,7 @@ from cartopy.mpl.geoaxes import GeoAxes
 from descartes import PolygonPatch
 from matplotlib.projections import register_projection
 from rad_fov import CalcFov
+import utils
 from shapely.geometry import LineString, MultiLineString, Polygon, mapping
 from cartopy.feature.nightshade import Nightshade
 
@@ -306,6 +307,74 @@ class SDCarto(GeoAxes):
         else:
             mlats, mlons = lats, lons
         return mlats, mlons
+
+    def overlay_station(
+        self,
+        stn,
+        tx=cartopy.crs.PlateCarree(),
+        marker="D",
+        zorder=2,
+        markerColor="darkgreen",
+        markerSize=2,
+        fontSize="x-small",
+        font_color="darkgreen",
+        xOffset=5,
+        yOffset=-1.5,
+        annotate=False,
+        drawline=True
+    ):
+        """Adding the radar location"""
+        lat, lon = stn["lat"], stn["lon"]
+        if "aacgm" in self.coords:
+            lat, lon = self.to_aagcm(lat, lon)
+        self.scatter(
+            [lon],
+            [lat],
+            s=markerSize,
+            marker=marker,
+            color=markerColor,
+            zorder=zorder,
+            transform=tx,
+            lw=0.8,
+            alpha=0.4,
+        )
+        if drawline:
+            lats, lons = (
+                [
+                    stn["lat"], 40.67836111111111
+                ],
+                [
+                    stn["lon"], -105.04052777777778
+                ]
+            )
+            d = utils.great_circle(stn["lon"], stn["lat"], -105.04052777777778, 40.67836111111111)
+            if d < 3000:
+                self.plot(
+                    lons,
+                    lats,
+                    "green",
+                    ls=":",
+                    zorder=zorder,
+                    transform=tx,
+                    lw=0.5,
+                    alpha=0.4,
+                )
+        if annotate:
+            lat, lon = stn["lat"] + yOffset, stn["lon"] + xOffset
+            if "aacgm" in self.coords:
+                lat, lon = self.to_aagcm(lat, lon)
+            x, y = self.projection.transform_point(lon, lat, src_crs=tx)
+            self.text(
+                x,
+                y,
+                stn["call"].upper(),
+                ha="center",
+                va="center",
+                transform=self.projection,
+                fontdict={"color": font_color, "size": fontSize},
+                alpha=0.4,
+            )
+        return
 
     def overlay_radar(
         self,

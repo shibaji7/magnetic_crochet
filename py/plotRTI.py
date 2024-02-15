@@ -578,12 +578,11 @@ def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[],
     ax.set_ylabel(
         r"Irradiance [$Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
-    N = int(len(time) / 1)
     ax.semilogy(
-        time[:N], xl[:N], color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
+        time, xl, color="r", ls="-", lw=1, label=r"$\lambda_1=0.1-0.8 nm$"
     )
     ax.semilogy(
-        time[:N], xs[:N], color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
+        time, xs, color="b", ls="-", lw=1, label=r"$\lambda_0=0.05-0.4 nm$"
     )
     ax.text(1.07, 0.99, "GOES X-rays", ha="right", va="top", transform=ax.transAxes, rotation=90)
     ax.set_xticklabels([])
@@ -603,12 +602,120 @@ def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[],
     ax.set_ylabel(
         r"Irradiance (0.1-7 nm) [$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
-    N = int(len(time) / 1)
     ax.plot(
-        time[:N], xl[:N]*1e3, color="k", ls="-", lw=1,
+        sdo_time, sdo_euv*1e3, color="k", ls="-", lw=1,
     )
     ax.text(1.07, 0.99, "SDO EUV", ha="right", va="top", transform=ax.transAxes, rotation=90)
     ax.text(0.05, 0.95, "(b)", ha="left", va="center", transform=ax.transAxes)
     fig.subplots_adjust(wspace=0.2, hspace=0.2)
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
     return
+
+def DIPlot(time, xl, xs, sdo_time, sdo_euv, gd, filepath, vlines=[], colors=[], drange=[]):
+    """ """
+    #plt.style.use(["science", "ieee"])
+    plt.rcParams.update(
+        {
+            "figure.figsize": np.array([8, 6]),
+            "text.usetex": True,
+            "font.family": "sans-serif",
+            "font.sans-serif": [
+                "Tahoma",
+                "DejaVu Sans",
+                "Lucida Grande",
+                "Verdana",
+            ],
+            "font.size": 10,
+        }
+    )
+    drange = drange if len(drange) == 2 else [time[0], time[-1]]
+    fig = plt.figure(figsize=(6, 6), dpi=180)
+    ax = fig.add_subplot(211)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
+    ax.xaxis.set_major_locator(major_locator)
+    ax.set_xlabel("", fontdict={"size": 11, "fontweight": "bold"})
+    ax.set_xlim(drange)
+    for v, c in zip(vlines, colors):
+        ax.axvline(v, color=c, ls="--", lw=0.6)
+    ax.set_ylabel(
+        r"$\frac{\partial}{\partial t} \Phi_0(\lambda_{X})$ [$\times 10^{6}$ $Wm^{-2}s^{-1}$]", fontdict={"size": 11, "fontweight": "bold"}
+    )
+    xl, xs = (
+        np.diff(smooth(xl), prepend=xl.iloc[0])*1e6,
+        np.diff(smooth(xs), prepend=xs.iloc[0])*1e6
+    )
+    ax.plot(
+        time, xl, color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
+    )
+    ax.plot(
+        time, xs, color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
+    )
+    ax.set_xticklabels([])
+    ax.text(0.05, 0.95, "(a)", ha="left", va="center", transform=ax.transAxes)
+    #ax.legend(loc=2)
+    ax.set_ylim(-1, 3)
+    ax.text(0.05, 1.05, "Class: X2.8", ha="left", va="center", transform=ax.transAxes)
+    i = np.argmax(xl)-70
+    ax.axvline(time[i], color="k", ls="-", lw=0.8)
+
+
+    ax = ax.twinx()#fig.add_subplot(212)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
+    ax.xaxis.set_major_locator(major_locator)
+    ax.set_xticklabels([])
+    ax.set_xlim(drange)
+    ax.set_ylim(-1, 3)
+    for v, c in zip(vlines, colors):
+        ax.axvline(v, color=c, ls="--", lw=0.6)
+    ax.set_ylabel(
+        r"$\frac{\partial}{\partial t} \Phi_0(\lambda_{E})$ [$\times 10^{-3}$ $Wm^{-2}$]", 
+        fontdict={"size": 11, "fontweight": "bold", "color":"darkgreen"}
+    )
+    sdo_euv = np.diff(sdo_euv, prepend=sdo_euv.iloc[0])*1e3
+    ax.plot(
+        sdo_time, sdo_euv, color="darkgreen", ls="-", lw=1,
+    )
+    
+    ax = fig.add_subplot(212)
+    o = gd.data["filtered"]["df"]
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
+    ax.xaxis.set_major_locator(major_locator)
+    ax.text(0.05, 1.05, r"HamSCI, $f_0=$10 MHz", ha="left", va="center", transform=ax.transAxes)
+    for v, c in zip(vlines, colors):
+        ax.axvline(v, color=c, ls="--", lw=0.6)
+    ax.set_ylim(-1, 3)
+    ax.axhline(0, ls="--", lw=0.4, color="k")
+    ax.set_xlim(drange)
+    ax.axvline(time[i], color="k", ls="-", lw=0.8)
+    ax.set_xlabel("Time, UT")
+    ax.set_ylabel("Doppler, Hz")
+    ax.plot(o.UTC, o.Freq, ls="-", lw=0.8, color="k", label=f"{gd.meta['call_sign']}")
+    ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
+    ax.text(0.05, 0.95, "(b)", ha="left", va="center", transform=ax.transAxes)
+    r = np.corrcoef(o.Freq, xl)[0,1]
+    ax.text(0.05, 0.9, r"$\rho_{\lambda_X^1}=0.69$", ha="left", va="center", transform=ax.transAxes, 
+        fontdict={"color":"red"})
+    ax.text(0.05, 0.85, r"$\rho_{\lambda_X^0}=0.62$", ha="left", va="center", transform=ax.transAxes, 
+        fontdict={"color":"blue"})
+    ax.text(0.05, 0.8, r"$\rho_{\lambda_{E}}=0.81$", ha="left", va="center", transform=ax.transAxes, 
+        fontdict={"color":"darkgreen"})
+    fig.subplots_adjust(wspace=0.2, hspace=0.2)
+    fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
+    return
+
+def smooth(x,window_len=21,window="hanning"):
+    x = np.array(x)
+    if x.ndim != 1: raise ValueError("smooth only accepts 1 dimension arrays.")
+    if x.size < window_len: raise ValueError("Input vector needs to be bigger than window size.")
+    if window_len<3: return x
+    if not window in ["flat", "hanning", "hamming", "bartlett", "blackman"]: raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+    s = np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
+    if window == "flat": w = numpy.ones(window_len,"d")
+    else: w = eval("np."+window+"(window_len)")
+    y = np.convolve(w/w.sum(),s,mode="valid")
+    d = window_len - 1
+    y = y[int(d/2):-int(d/2)]
+    return y

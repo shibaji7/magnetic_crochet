@@ -13,6 +13,27 @@ __status__ = "Research"
 
 import numpy as np
 
+from math import radians, degrees, sin, cos, asin, acos, sqrt
+def great_circle(lon1, lat1, lon2, lat2):
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    return 6371 * (
+        acos(sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(lon1 - lon2))
+    )
+
+def compute_entropy(x, bins):
+    c = np.histogram(x, bins)[0]
+    c_normalized = c/float(np.sum(c))
+    c_normalized = c_normalized[np.nonzero(c_normalized)]
+    h = -sum(c_normalized * np.log(c_normalized))  
+    return h
+
+def compute_normalized_MI(x, y, bins=5, state=None):
+    x = x.reshape(-1,1)
+    from sklearn.feature_selection import mutual_info_regression
+    mi = mutual_info_regression(x, y, random_state=state)
+    hx, hy = compute_entropy(x, bins), compute_entropy(y, bins)
+    nmi = 2*mi / (hx+hy)
+    return nmi
 
 def get_gridded_parameters(
     q, xparam="beam", yparam="slist", zparam="v", r=0, rounding=True
