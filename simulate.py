@@ -13,7 +13,8 @@ __status__ = "Research"
 
 import sys
 sys.path.extend(["py/", "py/fetch/", "py/geo/"])
-from analysis import Hopper, Stats
+from analysis import Stats
+from hopper import Hopper
 import argparse
 import datetime as dt
 import pandas as pd

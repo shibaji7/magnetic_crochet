@@ -20,6 +20,40 @@ from sunpy.net import Fido
 from sunpy.net import attrs as a
 
 
+class FlareInfo(object):
+    """
+    This class is dedicated to plot GOES
+    from the repo using SunPy
+    """
+
+    def __init__(self, dates, fl_class="C1.0"):
+        """
+        Parameters
+        ----------
+        dates: list of datetime object for start and end of TS
+        """
+        self.flare = pd.DataFrame()
+        self.dates = dates
+        result = Fido.search(
+            a.Time(
+                self.dates[0].strftime("%Y-%m-%d %H:%M"),
+                self.dates[1].strftime("%Y-%m-%d %H:%M"),
+            ),
+            a.hek.FL,
+            a.hek.FL.GOESCls > fl_class,
+            a.hek.OBS.Observatory == "GOES",
+        )
+        # Retrieve HEKTable from the Fido result and then load
+        hek_results = result["hek"]
+        if len(hek_results) > 0:
+            self.flare = hek_results[
+                "event_starttime",
+                "event_peaktime",
+                "event_endtime",
+                "fl_goescls",
+            ].to_pandas()
+        return
+
 class FlareTS(object):
     """
     This class is dedicated to plot GOES, RHESSI, and SDO data
@@ -100,10 +134,11 @@ class FlareTS(object):
                     )
         self.dfs["eve"].index.name = "time"
         self.dfs["eve"] = self.dfs["eve"].reset_index()
-        self.dfs["eve"] = self.dfs["eve"][
-            (self.dfs["eve"].time >= self.dates[0])
-            & (self.dfs["eve"].time <= self.dates[1])
-        ]
+        if len(self.dfs["eve"]) > 10:
+            self.dfs["eve"] = self.dfs["eve"][
+                (self.dfs["eve"].time >= self.dates[0])
+                & (self.dfs["eve"].time <= self.dates[1])
+            ]
         return
 
     def extract_stagging_data(self):
@@ -114,27 +149,27 @@ class FlareTS(object):
             rise_time=np.nan,
             fall_time=np.nan,
             peak_of_dI=dict(
-                xray_a=np.diff(self.dfs["goes"].xrsa).max(), # Store derivative
-                xray_b=np.diff(self.dfs["goes"].xrsb).max(),
-                ESPquad=np.diff(self.dfs["eve"]["0.1-7ESPquad"]).max(),
+                xray_a=np.float64(np.diff(self.dfs["goes"].xrsa).max()), # Store derivative
+                xray_b=np.float64(np.diff(self.dfs["goes"].xrsb).max()),
+                ESPquad=np.float64(np.diff(self.dfs["eve"]["0.1-7ESPquad"]).max()) if len(self.dfs["eve"]) > 0 else np.nan,
             ),
             peaks=dict(
-                xray_a=self.dfs["goes"].xrsa.max(),
-                xray_b=self.dfs["goes"].xrsb.max(),
-                ESPquad=self.dfs["eve"]["0.1-7ESPquad"].max(),
-                ESP171=self.dfs["eve"]["17.1ESP"].max(),
-                ESP257=self.dfs["eve"]["25.7ESP"].max(),
-                ESP304=self.dfs["eve"]["30.4ESP"].max(),
-                ESP366=self.dfs["eve"]["36.6ESP"].max(),
+                xray_a=np.float64(self.dfs["goes"].xrsa.max()),
+                xray_b=np.float64(self.dfs["goes"].xrsb.max()),
+                ESPquad=np.float64(self.dfs["eve"]["0.1-7ESPquad"].max()) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP171=np.float64(self.dfs["eve"]["17.1ESP"].max()) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP257=np.float64(self.dfs["eve"]["25.7ESP"].max()) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP304=np.float64(self.dfs["eve"]["30.4ESP"].max()) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP366=np.float64(self.dfs["eve"]["36.6ESP"].max()) if len(self.dfs["eve"]) > 0 else np.nan,
             ),
             energy=dict(
-                xray_a=np.trapz(self.dfs["goes"].xrsa.fillna(0), dx=60),
-                xray_b=np.trapz(self.dfs["goes"].xrsb.fillna(0), dx=60),
-                ESPquad=np.trapz(self.dfs["eve"]["0.1-7ESPquad"].fillna(0), dx=60),
-                ESP171=np.trapz(self.dfs["eve"]["17.1ESP"].fillna(0), dx=60),
-                ESP257=np.trapz(self.dfs["eve"]["25.7ESP"].fillna(0), dx=60),
-                ESP304=np.trapz(self.dfs["eve"]["30.4ESP"].fillna(0), dx=60),
-                ESP366=np.trapz(self.dfs["eve"]["36.6ESP"].fillna(0), dx=60),
+                xray_a=np.float64(np.trapz(self.dfs["goes"].xrsa.fillna(0), dx=60)),
+                xray_b=np.float64(np.trapz(self.dfs["goes"].xrsb.fillna(0), dx=60)),
+                ESPquad=np.float64(np.trapz(self.dfs["eve"]["0.1-7ESPquad"].fillna(0), dx=60)) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP171=np.float64(np.trapz(self.dfs["eve"]["17.1ESP"].fillna(0), dx=60)) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP257=np.float64(np.trapz(self.dfs["eve"]["25.7ESP"].fillna(0), dx=60)) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP304=np.float64(np.trapz(self.dfs["eve"]["30.4ESP"].fillna(0), dx=60)) if len(self.dfs["eve"]) > 0 else np.nan,
+                ESP366=np.float64(np.trapz(self.dfs["eve"]["36.6ESP"].fillna(0), dx=60)) if len(self.dfs["eve"]) > 0 else np.nan,
             ),
         )
         return etc

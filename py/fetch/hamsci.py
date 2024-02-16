@@ -182,16 +182,21 @@ class HamSci(object):
         """
         Load files using grape1 library
         """
-        inv = grape1.DataInventory(data_path=self.base)
-        inv.filter(
-            freq=freq,
-            sTime=self.date_range[0],
-            eTime=self.date_range[1],
-        )
-        gn = grape1.GrapeNodes(
-            fpath="config/nodelist.csv", logged_nodes=inv.logged_nodes
-        )
-        return inv, gn
+        import glob
+        files = glob.glob(f"{self.base}*.csv")
+        if len(files) > 0:
+            inv = grape1.DataInventory(data_path=self.base)
+            inv.filter(
+                freq=freq,
+                sTime=self.date_range[0],
+                eTime=self.date_range[1],
+            )
+            gn = grape1.GrapeNodes(
+                fpath="config/nodelist.csv", logged_nodes=inv.logged_nodes
+            )
+            return inv, gn
+        else:
+            return None, None
 
     def setup_plotting(
         self,
@@ -202,24 +207,27 @@ class HamSci(object):
         """
         self.gds = []
         inv, gn = self.load_nodes(freq)
-        node_nrs = inv.get_nodes()
-        for node in node_nrs:
-            try:
-                gd = grape1.Grape1Data(
-                    node,
-                    freq,
-                    self.date_range[0],
-                    self.date_range[1],
-                    inventory=inv,
-                    grape_nodes=gn,
-                    data_path=self.base,
-                )
-                gd.process_data()
-                self.gds.append(gd)
-            except:
-                import traceback
-
-                traceback.print_exc()
+        if inv:
+            node_nrs = inv.get_nodes()
+            for node in node_nrs:
+                try:
+                    logger.info(f"Node number: {node}")
+                    gd = grape1.Grape1Data(
+                        node,
+                        freq,
+                        self.date_range[0],
+                        self.date_range[1],
+                        inventory=inv,
+                        grape_nodes=gn,
+                        data_path=self.base,
+                    )
+                    gd.process_data()
+                    self.gds.append(gd)
+                except:
+                    import traceback
+                    traceback.print_exc()
+                    logger.error("Sorry, issue occured!")
+                    raise Exception("Sorry, issue occured!")
         return self.gds
 
     def extract_stagging_data(
@@ -244,17 +252,20 @@ class HamSci(object):
             flare_timings[2],
         )
         gds = gds if gds else self.gds
+        new_gds = []
         for gd in gds:
             params = dict()
             o = gd.data["filtered"]["df"]
-            del_t = (o.UTC[1] - o.UTC[0]).total_seconds()
-            rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
-            fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
-            params["rise_area"] = np.trapz(rise.Freq, dx=del_t)
-            params["fall_area"] = np.trapz(fall.Freq, dx=del_t)
-            params["peak"] = rise.Freq.max()
-            setattr(gd, "df_params", params)
-        self.gds = gds
+            if len(o) > 10:
+                del_t = (o.UTC[1] - o.UTC[0]).total_seconds()
+                rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
+                fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
+                params["rise_area"] = np.trapz(rise.Freq, dx=del_t)
+                params["fall_area"] = np.trapz(fall.Freq, dx=del_t)
+                params["peak"] = rise.Freq.max()
+                setattr(gd, "df_params", params)
+                new_gds.append(gd)
+        self.gds = new_gds
         return
 
 

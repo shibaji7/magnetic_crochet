@@ -318,12 +318,11 @@ def GOESPlot(time, xl, xs, filepath, vlines=[], colors=[], drange=[]):
     ax.set_ylabel(
         r"Irradiance [$Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
-    N = int(len(time) / 2)
     ax.semilogy(
-        time[:N], xl[:N], color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
+        time, xl, color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
     )
     ax.semilogy(
-        time[:N], xs[:N], color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
+        time, xs, color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
     )
     ax.legend(loc=2)
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
@@ -537,7 +536,6 @@ def joyplot(
     ax0.set_xlabel("Time, UT")
     ax0.set_ylabel("Doppler, Hz")
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
-    print(gd.meta)
     return
 
 
@@ -602,6 +600,7 @@ def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[],
     ax.set_ylabel(
         r"Irradiance (0.1-7 nm) [$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
+    #print(sdo_time, sdo_euv)
     ax.plot(
         sdo_time, sdo_euv*1e3, color="k", ls="-", lw=1,
     )
