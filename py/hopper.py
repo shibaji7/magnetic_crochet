@@ -255,8 +255,8 @@ def load_stagged_events():
                         dx["peak_dI_ESPquad"] = o["flare"]["peak_of_dI"]["ESPquad"]
                         dx["peak_dI_xray_a"] = o["flare"]["peak_of_dI"]["xray_a"]
                         dx["peak_dI_xray_b"] = o["flare"]["peak_of_dI"]["xray_b"]
-                        dx["lat"], dx["lon"], dx["freq"], dx["call_sign"], dx["rise_area"],\
-                            dx["peak"], dx["fall_area"] = (
+                        dx["lat"], dx["lon"], dx["freq"], dx["call_sign"], dx["doppler_rise_area"],\
+                            dx["doppler_peak"], dx["doppler_fall_area"] = (
                             h["lat"], h["lon"], h["freq"], h["call_sign"], 
                             h["rise_area"], h["peak"], h["fall_area"]
                         )
