@@ -228,23 +228,52 @@ def create_event_list(year=2023):
         flares.to_csv(fname, index=False, header=True)
     return
 
-def run_event(file="config/events_2023.csv", ftype="X"):
-    """
-    Load all the events from
-    events list files and fork Hopper
-    to pre-process and store the
-    dataset.
-    """
-    o = pd.read_csv(
-        file, 
-        parse_dates=["event", "start", "end", "s_time", "e_time"],
-    )
-    o = o[o.fclass.str.contains(ftype)]
-    o = o.reset_index()
-    logger.info(f"Total flares: {len(o)}")
-    for i, row in o.iterrows():
+def load_stagged_events():
+    fname = "data/events.csv"
+    if not os.path.exists(fname):
+        import glob
+        folders = glob.glob("data/stage/*")
+        files = [f + "/stage.json" for f in folders]
+        dataset, number_of_events = [], 0
+        for f in files:
+            if os.path.exists(f):
+                number_of_events += 1
+                with open(f,"r") as fp:
+                    o = json.loads("\n".join(fp.readlines()))
+                    for h in o["hamsci"]:
+                        dx = {}
+                        dx["flare_rise_time"], dx["flare_fall_time"] = (
+                            o["flare"]["rise_time"],
+                            o["flare"]["fall_time"]
+                        )
+                        dx["energy_ESPquad"] = o["flare"]["energy"]["ESPquad"]
+                        dx["energy_xray_a"] = o["flare"]["energy"]["xray_a"]
+                        dx["energy_xray_b"] = o["flare"]["energy"]["xray_b"]
+                        dx["peak_ESPquad"] = o["flare"]["peaks"]["ESPquad"]
+                        dx["peak_xray_a"] = o["flare"]["peaks"]["xray_a"]
+                        dx["peak_xray_b"] = o["flare"]["peaks"]["xray_b"]
+                        dx["peak_dI_ESPquad"] = o["flare"]["peak_of_dI"]["ESPquad"]
+                        dx["peak_dI_xray_a"] = o["flare"]["peak_of_dI"]["xray_a"]
+                        dx["peak_dI_xray_b"] = o["flare"]["peak_of_dI"]["xray_b"]
+                        dx["lat"], dx["lon"], dx["freq"], dx["call_sign"], dx["rise_area"],\
+                            dx["peak"], dx["fall_area"] = (
+                            h["lat"], h["lon"], h["freq"], h["call_sign"], 
+                            h["rise_area"], h["peak"], h["fall_area"]
+                        )
+                        dataset.append(dx)
+        df = pd.DataFrame.from_records(dataset)
+        df["number_of_events"] = number_of_events
+        logger.warning(f"Long list of PSWS/events: {len(df)}/{number_of_events}")
+        df.to_csv(fname, index=False, float_format="%g")
+    else:
+        df = pd.read_csv(fname)
+        logger.warning(f"Long list of events: {len(df)}")
+    return
+
+def run_event_countdown(i, row, L):
+    try:
         ev = row["event"]
-        logger.info(f"Event number: {i} of {len(o)} <:> {ev}")        
+        logger.warning(f"Event number: {i} of {L} <:> {ev}")        
         row["e_time"], row["s_time"] = (
             pd.to_datetime(row["e_time"]),
             pd.to_datetime(row["s_time"])
@@ -260,6 +289,38 @@ def run_event(file="config/events_2023.csv", ftype="X"):
         row["rads"] = row["rads"].replace(" ", "")
         rads = row["rads"].split("-") if len(str(row["rads"])) > 0 else []
         Hopper(base, dates, rads, ev, row["start"], row["end"])
+    except:
+        logger.error("System error!!")
+    return 0
+
+def run_event(file="config/events_2023.csv", ftype="X", runstart=0, runend=-1):
+    """
+    Load all the events from
+    events list files and fork Hopper
+    to pre-process and store the
+    dataset.
+    """
+    o = pd.read_csv(
+        file, 
+        parse_dates=["event", "start", "end", "s_time", "e_time"],
+    )
+    o = o[o.fclass.str.contains(ftype)]
+    o = o.reset_index()
+    o["stage_json_fname"] = o.event.apply(
+        lambda ev: "data/stage/{Y}-{m}-{d}-{H}-{M}/stage.json".format(
+            Y=ev.year,
+            m="%02d" % ev.month,
+            d="%02d" % ev.day,
+            H="%02d" % ev.hour,
+            M="%02d" % ev.minute,
+        )
+    )
+    logger.info(f"Total detected flares: {len(o)}")
+    o = o.drop([i for i, row in o.iterrows() if os.path.exists(row["stage_json_fname"])])
+    o = o.reset_index().iloc[runstart:runend]
+    logger.info(f"Total flares: {len(o)}")
+    from joblib import Parallel, delayed
+    _ = Parallel(n_jobs=8)(delayed(run_event_countdown)(i, row, len(o)) for i, row in o.iterrows())    
     return
 
 if __name__ == "__main__":
@@ -272,6 +333,8 @@ if __name__ == "__main__":
     run_event("config/events_2021.csv", "M")
     run_event("config/events_2022.csv", "M")
     run_event("config/events_2023.csv", "M")
-    #run_event("config/events_2021.csv", "C")
-    #run_event("config/events_2022.csv", "C")
+    run_event("config/events_2021.csv", "C")
+    run_event("config/events_2022.csv", "C", runstart=17, runend=-1)
+    run_event("config/events_2023.csv", "C", runstart=18)
+    load_stagged_events()
     
