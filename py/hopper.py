@@ -26,6 +26,29 @@ sys.path.extend(["py/", "py/fetch/", "py/geo/"])
 from plotFoV import Fan
 from plotRTI import RTI, GOESSDOPlot, HamSciParamTS, HamSciTS, joyplot
 
+
+class Stats(object):
+    """
+    This class is responsible for
+    generateing the statistics for HamSCI
+    and(or) SuperDARN HF observations
+    """
+
+    def __init__(self, records, **keywrds):
+        self.records = records
+        for k, v in keywrds:
+            setattr(self, k, v)
+        return
+
+    def run_hamsci_stats(self):
+        """
+        Conduct the analysis
+        """
+        events = events.dropna()
+        uq = 0.32
+
+        return
+
 class Hopper(object):
     """
     This class is responsible for following
@@ -228,8 +251,47 @@ def create_event_list(year=2023):
         flares.to_csv(fname, index=False, header=True)
     return
 
+def get_bearing(start_loc, stop_loc):
+    """
+    Bearing between two lat/long coordinates: 
+        (lat1, lon1), (lat2, lon2)
+    """
+    import math
+    dLon = stop_loc[1] - start_loc[1]
+    y = math.sin(dLon) * math.cos(stop_loc[0])
+    x = (
+        (math.cos(start_loc[0])*math.sin(stop_loc[0])) - 
+        (math.sin(start_loc[0])*math.cos(stop_loc[0])*math.cos(dLon))
+    )
+    brng = np.rad2deg(math.atan2(y, x))
+    if brng < 0: brng+= 360
+    return brng
+
+def calculate_zenith_angle(start_loc, stop_loc, d):
+    """
+    Thing to try for SZA: instead of computing it for 
+    the lat/lon of the station, we might try computing 
+    the halfway point between the station lat/lon and WWV 
+    using the haversine formula, and calculating the SZA 
+    for that point 600 km up.
+    """
+    from geopy import distance
+    dist = distance.distance(start_loc, stop_loc).km/2
+    brng = get_bearing(start_loc, stop_loc)    
+    destination = distance.distance(kilometers=dist).destination(start_loc, brng)
+    za = get_altitude(
+        destination.latitude,
+        destination.longitude,
+        d
+    )
+    return za
+
 def load_stagged_events():
     fname = "data/events.csv"
+    start_loc = (
+        40.014984,
+        -105.270546
+    )
     if not os.path.exists(fname):
         import glob
         folders = glob.glob("data/stage/*")
@@ -237,6 +299,7 @@ def load_stagged_events():
         dataset, number_of_events = [], 0
         for f in files:
             if os.path.exists(f):
+                d = dt.datetime.strptime(f.split("/")[-2], "%Y-%m-%d-%H-%M")
                 number_of_events += 1
                 with open(f,"r") as fp:
                     o = json.loads("\n".join(fp.readlines()))
@@ -260,13 +323,16 @@ def load_stagged_events():
                             h["lat"], h["lon"], h["freq"], h["call_sign"], 
                             h["rise_area"], h["peak"], h["fall_area"]
                         )
+                        d = d.replace(tzinfo=dt.timezone.utc)
+                        dx["sza"] = calculate_zenith_angle(start_loc, (h["lat"], h["lon"]), d)
+                        dx["date"] = d
                         dataset.append(dx)
         df = pd.DataFrame.from_records(dataset)
         df["number_of_events"] = number_of_events
         logger.warning(f"Long list of PSWS/events: {len(df)}/{number_of_events}")
         df.to_csv(fname, index=False, float_format="%g")
     else:
-        df = pd.read_csv(fname)
+        df = pd.read_csv(fname, parse_dates=["date"])
         logger.warning(f"Long list of events: {len(df)}")
     return
 
