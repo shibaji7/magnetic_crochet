@@ -29,7 +29,9 @@ from analysis import Stats
 def plot_fov_plots():
     nodes = get_all_nodes()
     date = dt.datetime(2023,12,14,17,2)
-    fan = Fan(["fhe","fhw", "bks", "gbr", "kap", "sas", "cve", "cvw", "pgr"], date)
+    rads = ["fhe","fhw", "bks", "gbr", "kap", "sas", "cve", "cvw", "pgr"]
+    rads = ["fhe","fhw"]
+    fan = Fan(rads, date)
     fan.generate_fov(nodes)
     fan.save("data/analysis/fov.png")
     fan.close()
@@ -43,18 +45,20 @@ def get_all_nodes():
         files = glob.glob(d + "/hamsci/*.csv")
         for file in files:
             with open(file,"r") as fp:
+                print(file)
                 lines = fp.readlines()[:16]
-                node = list(filter(None, lines[4].replace("\n", "").split(" ")))[4]
-                call = list(filter(None, lines[5].replace("\n", "").split(" ")))[2]
-                geo = list(filter(None, lines[7].replace("\n", "").split("         ")))
-                geo = geo[-1].split(",")
-                lat, lon, elv = np.round(float(geo[0]), 2), np.round(float(geo[1]), 2), np.round(float(geo[2]), 2)
-                id = call.upper() + "_" + node
-                if (not id in node_dic):
-                    node_dic[id] = dict(
-                        id=id, node=node, call=call, lat=lat, lon=lon, elv=elv
-                    )
-                    print(node, call.upper(), f"{lat} N, {lon} E")
+                if len(lines) > 10:
+                    node = list(filter(None, lines[4].replace("\n", "").split(" ")))[4]
+                    call = list(filter(None, lines[5].replace("\n", "").split(" ")))[2]
+                    geo = list(filter(None, lines[7].replace("\n", "").split("         ")))
+                    geo = geo[-1].split(",")
+                    lat, lon, elv = np.round(float(geo[0]), 2), np.round(float(geo[1]), 2), np.round(float(geo[2]), 2)
+                    id = call.upper()
+                    if (not id in node_dic) and node!="N0000000":
+                        node_dic[id] = dict(
+                            id=id, node=node, call=call.upper(), lat=lat, lon=lon, elv=elv
+                        )
+                        print(node, call.upper(), f"{lat} N, {lon} E")
     node_dic["WWV"] = dict(
         node="N/1", call="WWV/H", 
         lat=40.67836111111111, lon=-105.04052777777778, 
@@ -210,8 +214,9 @@ def plot_statistics(hamsci_event_list="config/hamsci_events.csv"):
 
 if __name__ == "__main__":
     #plot_time_hamsci_dI()
-    plot_statistics()
+    #plot_statistics()
     #plot_hamsci_event()
     #plot_sd_event()
     #plot_goes_sdo_observations()
-    #plot_fov_plots()
+    plot_fov_plots()
+    #get_all_nodes()
