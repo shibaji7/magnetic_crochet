@@ -213,10 +213,10 @@ def plot_statistics(hamsci_event_list="config/hamsci_events.csv"):
     return
 
 if __name__ == "__main__":
-    #plot_time_hamsci_dI()
+    plot_time_hamsci_dI()
     #plot_statistics()
     #plot_hamsci_event()
     #plot_sd_event()
     #plot_goes_sdo_observations()
-    plot_fov_plots()
+    #plot_fov_plots()
     #get_all_nodes()

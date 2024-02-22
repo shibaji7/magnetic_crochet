@@ -694,12 +694,14 @@ def DIPlot(time, xl, xs, sdo_time, sdo_euv, gd, filepath, vlines=[], colors=[], 
     ax.plot(o.UTC, o.Freq, ls="-", lw=0.8, color="k", label=f"{gd.meta['call_sign']}")
     ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
     ax.text(0.05, 0.95, "(b)", ha="left", va="center", transform=ax.transAxes)
-    r = np.corrcoef(o.Freq, xl)[0,1]
-    ax.text(0.05, 0.9, r"$\rho_{\lambda_X^1}=0.69$", ha="left", va="center", transform=ax.transAxes, 
-        fontdict={"color":"red"})
-    ax.text(0.05, 0.85, r"$\rho_{\lambda_X^0}=0.62$", ha="left", va="center", transform=ax.transAxes, 
+    n_euv = utils.compute_normalized_MI(np.array(o.Freq)[::60], np.array(sdo_euv[:-1]))[0]
+    n_xl = utils.compute_normalized_MI(np.array(o.Freq), np.array(xl))[0]
+    n_xs = utils.compute_normalized_MI(np.array(o.Freq), np.array(xs))[0]
+    ax.text(0.05, 0.87, r"$\mathcal{N}_{\lambda_0}=%.2f$"%n_xs, ha="left", va="center", transform=ax.transAxes, 
         fontdict={"color":"blue"})
-    ax.text(0.05, 0.8, r"$\rho_{\lambda_{E}}=0.81$", ha="left", va="center", transform=ax.transAxes, 
+    ax.text(0.05, 0.79, r"$\mathcal{N}_{\lambda_1}=%.2f$"%n_xl, ha="left", va="center", transform=ax.transAxes, 
+        fontdict={"color":"red"})
+    ax.text(0.05, 0.71, r"$\mathcal{N}_{\lambda_{E}}=%.2f$"%n_euv, ha="left", va="center", transform=ax.transAxes, 
         fontdict={"color":"darkgreen"})
     fig.subplots_adjust(wspace=0.2, hspace=0.2)
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
