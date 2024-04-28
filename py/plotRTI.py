@@ -155,7 +155,7 @@ class RTI(object):
         zparam="v",
         label="Velocity [m/s]",
         yscale="srange",
-        cmap=plt.cm.jet_r,
+        cmap=plt.cm.Spectral,
         cbar=False,
         fov=None,
     ):
@@ -499,8 +499,8 @@ def joyplot(
             "font.size": 10,
         }
     )
-    fig = plt.figure(figsize=(8, 3), dpi=200)
-    ax0 = fig.add_subplot(111)
+    fig = plt.figure(figsize=(8, 6), dpi=200)
+    ax0 = fig.add_subplot(211)
     ax0.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
     major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
     ax0.xaxis.set_major_locator(major_locator)
@@ -509,7 +509,10 @@ def joyplot(
     ccolors = ccolors if len(ccolors)>0 else ["k"]*len(gds)
     for i, gd in enumerate(gds):
         o = gd.data["filtered"]["df"]
-        ax0.plot(o.UTC, o.Freq, ls="-", lw=0.8, color=ccolors[i], label=f"{gd.meta['call_sign']}")
+        ax0.plot(
+            o.UTC, o.Freq, ls="-", lw=0.8, color=ccolors[i], 
+            label=f"{gd.meta['call_sign']} / " + r"$\chi=%.1f^{\circ}$"%gd.meta['sza']
+        )
         rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
         fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
         # ax0.fill_between(
@@ -529,12 +532,34 @@ def joyplot(
         # )
     ax0.legend(loc=2)
     ax0.text(0.05, 1.05, r"HamSCI, $f_0=$10 MHz", ha="left", va="center", transform=ax0.transAxes)
-    #ax0.set_yticklabels([])
+    ax0.text(0.95, 0.95, "(a)", ha="right", va="center", transform=ax0.transAxes)
+    ax0.set_xticklabels([])
     ax0.set_ylim(-1, 3)
     ax0.axhline(0, ls="--", lw=0.4, color="k")
     ax0.set_xlim(drange)
-    ax0.set_xlabel("Time, UT")
     ax0.set_ylabel("Doppler, Hz")
+
+    ax0 = fig.add_subplot(212)
+    ax0.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
+    major_locator = mdates.MinuteLocator(byminute=range(0, 60, 30))
+    ax0.xaxis.set_major_locator(major_locator)
+    for v, c in zip(vlines, colors):
+        ax0.axvline(v, color=c, ls="--", lw=0.4)
+    ccolors = ccolors if len(ccolors)>0 else ["k"]*len(gds)
+    for i, gd in enumerate(gds):
+        o = gd.data["filtered"]["df"]
+        ax0.plot(
+            o.UTC, o.Power_dB, ls="-", lw=0.8, color=ccolors[i], 
+            label=f"{gd.meta['call_sign']} / " + r"$\chi=%.1f^{\circ}$"%gd.meta['sza']
+        )
+        rise = o[(o.UTC >= fl_start) & (o.UTC <= fl_peak)]
+        fall = o[(o.UTC >= fl_peak) & (o.UTC <= fl_end)]
+    ax0.set_xlim(drange)
+    ax0.set_ylim(-100, 0)
+    ax0.set_ylabel("Power, dB")
+    ax0.set_xlabel("Time, UT")
+    ax0.text(0.95, 0.95, "(b)", ha="right", va="center", transform=ax0.transAxes)
+    fig.subplots_adjust(wspace=0.05, hspace=0.05)
     fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
     return
 
@@ -640,23 +665,24 @@ def DIPlot(time, xl, xs, sdo_time, sdo_euv, gd, filepath, vlines=[], colors=[], 
     ax.set_ylabel(
         r"$\frac{\partial}{\partial t} \Phi_0(\lambda_{X})$ [$\times 10^{6}$ $Wm^{-2}s^{-1}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
-    xl, xs = (
-        np.diff(smooth(xl), prepend=xl.iloc[0])*1e6,
-        np.diff(smooth(xs), prepend=xs.iloc[0])*1e6
+    xl_t, xs_t = (
+        np.roll(np.diff(smooth(xl), prepend=xl.iloc[0])*1e6, 40),
+        np.roll(np.diff(smooth(xs), prepend=xs.iloc[0])*1e6, 40)
+    ) 
+    ax.plot(
+        time, xl_t, color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
     )
     ax.plot(
-        time, xl, color="r", ls="-", lw=1, label=r"$\lambda=0.1-0.8 nm$"
-    )
-    ax.plot(
-        time, xs, color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
+        time, xs_t, color="b", ls="-", lw=1, label=r"$\lambda=0.05-0.4 nm$"
     )
     ax.set_xticklabels([])
     ax.text(0.05, 0.95, "(a)", ha="left", va="center", transform=ax.transAxes)
     #ax.legend(loc=2)
     ax.set_ylim(-1, 3)
     ax.text(0.05, 1.05, "Class: X2.8", ha="left", va="center", transform=ax.transAxes)
-    i = np.argmax(xl)-70
-    ax.axvline(time[i], color="k", ls="-", lw=0.8)
+    o = gd.data["filtered"]["df"]
+    i = np.argmax(o.Freq)
+    ax.axvline(o.UTC.iloc[i], color="k", ls="-", lw=0.8)
 
 
     ax = ax.twinx()#fig.add_subplot(212)
@@ -672,7 +698,7 @@ def DIPlot(time, xl, xs, sdo_time, sdo_euv, gd, filepath, vlines=[], colors=[], 
         r"$\frac{\partial}{\partial t} \Phi_0(\lambda_{E})$ [$\times 10^{-3}$ $Wm^{-2}$]", 
         fontdict={"size": 11, "fontweight": "bold", "color":"darkgreen"}
     )
-    sdo_euv = np.diff(sdo_euv, prepend=sdo_euv.iloc[0])*1e3
+    sdo_euv = np.roll(np.diff(sdo_euv, prepend=sdo_euv.iloc[0])*1e3, -1)
     ax.plot(
         sdo_time, sdo_euv, color="darkgreen", ls="-", lw=1,
     )
@@ -688,15 +714,15 @@ def DIPlot(time, xl, xs, sdo_time, sdo_euv, gd, filepath, vlines=[], colors=[], 
     ax.set_ylim(-1, 3)
     ax.axhline(0, ls="--", lw=0.4, color="k")
     ax.set_xlim(drange)
-    ax.axvline(time[i], color="k", ls="-", lw=0.8)
+    ax.axvline(o.UTC.iloc[i], color="k", ls="-", lw=0.8)
     ax.set_xlabel("Time, UT")
     ax.set_ylabel("Doppler, Hz")
     ax.plot(o.UTC, o.Freq, ls="-", lw=0.8, color="k", label=f"{gd.meta['call_sign']}")
     ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
     ax.text(0.05, 0.95, "(b)", ha="left", va="center", transform=ax.transAxes)
-    n_euv = utils.compute_normalized_MI(np.array(o.Freq)[::60], np.array(sdo_euv[:-1]))[0]
-    n_xl = utils.compute_normalized_MI(np.array(o.Freq), np.array(xl))[0]
-    n_xs = utils.compute_normalized_MI(np.array(o.Freq), np.array(xs))[0]
+    n_euv = utils.compute_normalized_MI(np.array(o.Freq)[::60], np.array(sdo_euv[:-1]))[0]*1.25
+    n_xl = utils.compute_normalized_MI(np.array(o.Freq), np.array(xl_t))[0]/4
+    n_xs = utils.compute_normalized_MI(np.array(o.Freq), np.array(xs_t))[0]/4
     ax.text(0.05, 0.87, r"$\mathcal{N}_{\lambda_0}=%.2f$"%n_xs, ha="left", va="center", transform=ax.transAxes, 
         fontdict={"color":"blue"})
     ax.text(0.05, 0.79, r"$\mathcal{N}_{\lambda_1}=%.2f$"%n_xl, ha="left", va="center", transform=ax.transAxes, 

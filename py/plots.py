@@ -148,15 +148,24 @@ def plot_hamsci_event():
         ]
     )
     flare_timings = flare_timings.dt.tz_localize("UTC")
+    from analysis import calculate_zenith_angle
+    import pytz
+    for gd in ham.gds:
+        sza = calculate_zenith_angle(
+            (gd.meta["lat"], gd.meta["lon"]),
+            (40.6683, -105.0384),
+            fts.flare["event_peaktime"].iloc[0].replace(tzinfo=pytz.UTC)
+        )
+        gd.meta["sza"] = sza
     gds = [ham.gds[1]]
     joyplot(
-            ham.gds[1:],
+            ham.gds[1:5],
             f"data/analysis/joyplot.png",
             flare_timings,
             vlines=vlines,
             colors=colors,
             drange=dates,
-            ccolors=["r", "b", "k"]
+            ccolors=["r", "b", "k", "g"]
         )
     return
 
@@ -207,7 +216,7 @@ def plot_statistics(hamsci_event_list="config/hamsci_events.csv"):
     ).to_dict(orient="records")
     for rec in records:
         rec["call_sign"] = rec["call_sign"].split("-")
-        rec["summary_file"] = f"data/stage/{rec['event'].strftime('%Y-%m-%d-%H-%M')}/stage0.mat"
+        rec["summary_file"] = f"data/stage/{rec['event'].strftime('%Y-%m-%d-%H-%M')}/stage.mat"
     stat = Stats(records)
     stat.run_hamsci_stats("data/analysis/scatter.png")
     return

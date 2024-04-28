@@ -62,6 +62,12 @@ def calculate_zenith_angle(start_loc, stop_loc, d):
     )
     return za
 
+def calculate_zenith_angle_by_location(loc, d):
+    za = get_altitude(
+        loc[0], loc[1], d
+    )
+    return za
+
 def fit_OLS(y, X, alphas=[0.05]):
     import statsmodels.api as sm
     from scipy.stats import t
@@ -148,7 +154,8 @@ class Stats(object):
                         call_sign=x["call_sign"][0][0][0],
                         lat=x["lat"][0][0][0][0],
                         lon=x["lon"][0][0][0][0],
-                        sza=calculate_zenith_angle(start_loc, stop_loc, d),
+                        #sza=calculate_zenith_angle(start_loc, stop_loc, d),
+                        sza=calculate_zenith_angle_by_location(stop_loc, d),
                         call=call,
                         flare_peaks_xray_a=flare["peaks"][0,0]["xray_a"][0,0][0,0]*1e6,
                         flare_peaks_xray_b=flare["peaks"][0,0]["xray_b"][0,0][0,0]*1e5,
