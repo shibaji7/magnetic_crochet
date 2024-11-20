@@ -35,26 +35,46 @@ def compute_normalized_MI(x, y, bins=5, state=None):
     nmi = 2*mi / (hx+hy)
     return nmi
 
-def get_gridded_parameters(
-    q, xparam="beam", yparam="slist", zparam="v", r=0, rounding=True
-):
+# def get_gridded_parameters(
+#     q, xparam="beam", yparam="slist", zparam="v", r=0, rounding=False
+# ):
+#     """
+#     Method converts scans to "beam" and "slist" or gate
+#     """
+#     plotParamDF = q[[xparam, yparam, zparam]]
+#     if rounding:
+#         plotParamDF.loc[:, xparam] = np.round(plotParamDF[xparam].tolist(), r)
+#         plotParamDF.loc[:, yparam] = np.round(plotParamDF[yparam].tolist(), r)
+#     else:
+#         plotParamDF[xparam] = plotParamDF[xparam].tolist()
+#         plotParamDF[yparam] = plotParamDF[yparam].tolist()
+#     plotParamDF = plotParamDF.groupby([xparam, yparam]).mean().reset_index()
+#     plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(index=xparam, columns=yparam)
+#     x = plotParamDF.index.values
+#     y = plotParamDF.columns.levels[1].values
+#     X, Y = np.meshgrid(x, y)
+#     # Mask the nan values! pcolormesh can't handle them well!
+#     # Z = np.ma.masked_where(
+#     #     np.isnan(plotParamDF[zparam].values), plotParamDF[zparam].values
+#     # )
+#     # print(Z.min(), Z.max())
+#     return X, Y, plotParamDF[zparam].values
+
+def get_gridded_parameters(q, xparam="time", yparam="slist", zparam="v", round=False):
     """
     Method converts scans to "beam" and "slist" or gate
     """
-    plotParamDF = q[[xparam, yparam, zparam]]
-    if rounding:
-        plotParamDF.loc[:, xparam] = np.round(plotParamDF[xparam].tolist(), r)
-        plotParamDF.loc[:, yparam] = np.round(plotParamDF[yparam].tolist(), r)
-    else:
-        plotParamDF[xparam] = plotParamDF[xparam].tolist()
-        plotParamDF[yparam] = plotParamDF[yparam].tolist()
-    plotParamDF = plotParamDF.groupby([xparam, yparam]).mean().reset_index()
-    plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(index=xparam, columns=yparam)
+    plotParamDF = q[ [xparam, yparam, zparam] ]
+    if round:
+        plotParamDF[xparam] = np.round(plotParamDF[xparam], 2)
+        plotParamDF[yparam] = np.round(plotParamDF[yparam], 2)
+    plotParamDF = plotParamDF.groupby( [xparam, yparam] ).mean().reset_index()
+    plotParamDF = plotParamDF[ [xparam, yparam, zparam] ].pivot(index=xparam, columns=yparam)
     x = plotParamDF.index.values
     y = plotParamDF.columns.levels[1].values
-    X, Y = np.meshgrid(x, y)
+    X, Y  = np.meshgrid( x, y )
     # Mask the nan values! pcolormesh can't handle them well!
     Z = np.ma.masked_where(
-        np.isnan(plotParamDF[zparam].values), plotParamDF[zparam].values
-    )
-    return X, Y, Z
+            np.isnan(plotParamDF[zparam].values),
+            plotParamDF[zparam].values)
+    return X,Y,Z

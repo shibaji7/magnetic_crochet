@@ -149,8 +149,11 @@ class HamSci(object):
         o = []
         now = dt.date.today()
         # if now.year > self.dates[0].year:
-        if self.dates[0].year <= 2021:
-            self.conn.ftp.cwd(str(self.dates[0].year))
+        # if self.dates[0].year <= 2021:
+        #     self.conn.ftp.cwd(str(self.dates[0].year))
+        ret = []
+        self.conn.ftp.dir("",ret.append)
+        ret = [x.split()[-1] for x in ret if x.startswith("d")]
         files = self.conn.ftp.nlst()
         for file in files:
             if (".csv" in file) and ("FRQ" in file) and ("T000000Z" in file):
@@ -227,7 +230,7 @@ class HamSci(object):
                     import traceback
                     traceback.print_exc()
                     logger.error("Sorry, issue occured!")
-                    raise Exception("Sorry, issue occured!")
+                    #raise Exception("Sorry, issue occured!")
         return self.gds
 
     def extract_stagging_data(

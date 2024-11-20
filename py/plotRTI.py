@@ -158,6 +158,7 @@ class RTI(object):
         cmap=plt.cm.Spectral,
         cbar=False,
         fov=None,
+        ax=None,
     ):
         if yscale == "srange":
             yrange, ylab = (
@@ -166,7 +167,7 @@ class RTI(object):
             )
         else:
             yrange, ylab = (self.nGates, "Range Gates")
-        ax = self._add_axis()
+        ax = ax if ax else self._add_axis()
         df = df[df.bmnum == beam]
         X, Y, Z = utils.get_gridded_parameters(
             df, xparam="time", yparam=yscale, zparam=zparam, rounding=False

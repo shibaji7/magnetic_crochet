@@ -18,6 +18,58 @@ from hopper import Hopper
 import argparse
 import datetime as dt
 import pandas as pd
+from loguru import logger
+import numpy as np
+
+def create_stack_plot(idx, file="config/events.csv"):
+    """
+    Load all the events from
+    events list files and fork Hopper
+    to pre-process and store the
+    dataset.
+    """
+    from flare import FlareTS
+    from hamsci import HamSci
+    from darn import FetchData
+    from stack_plots import Stackplots
+
+    o = pd.read_csv(
+        file, 
+        parse_dates=["event", "start", "end", "s_time", "e_time"],
+    )
+    row = o.iloc[idx]
+    ev = row["event"]
+    row["e_time"], row["s_time"] = (
+        pd.to_datetime(row["e_time"]),
+        pd.to_datetime(row["s_time"])
+    )
+    base = "data/{Y}-{m}-{d}-{H}-{M}/".format(
+        Y=ev.year,
+        m="%02d" % ev.month,
+        d="%02d" % ev.day,
+        H="%02d" % ev.hour,
+        M="%02d" % ev.minute,
+    )
+    logger.info(f"Base '{base}'")
+    dates = [row["s_time"], row["e_time"]]
+    row["rads"] = row["rads"].replace(" ", "")
+    rads = row["rads"].split("-") if len(str(row["rads"])) > 0 else []
+    logger.info(f"All radars: {rads}")
+    flareTS = FlareTS(dates)
+    hamSci = HamSci(base, dates, None)
+    hamSci.setup_plotting()
+    fds = FetchData.fetch(base, rads, dates)
+    sp = Stackplots(dates)
+    sp.GOESSDOPlot(
+        flareTS.dfs["goes"].time, flareTS.dfs["goes"].xrsb, flareTS.dfs["goes"].xrsa,
+        flareTS.dfs["eve"].time, flareTS.dfs["eve"]["0.1-7ESPquad"]
+    )
+    title = f"BKS, Beam: 7 / {np.round(fds['bks'].records.tfreq.mean()/1e3, 2)} MHz"
+    sp.addParamPlot(fds["bks"].records, 7, title, xlabel="")
+    sp.HamSciTS(hamSci.gds, title="HamSCI / 10 MHz")
+    sp.save(base + "/stack_plot.png")    
+    sp.close()
+    return
 
 
 def run_event(idx, file="config/events.csv"):
@@ -71,10 +123,10 @@ if __name__ == "__main__":
         "-i", "--index", default=0, type=int, help="Index (0)"
     )
     parser.add_argument(
-        "-cf", "--cfg_file", default="config/events.csv", type=str, help="Configuration file"
+        "-cf", "--cfg_file", default="config/events_2024.csv", type=str, help="Configuration file"
     )
     parser.add_argument(
-        "-m", "--method", default="EA", type=str, help="Methods to run (EA:Event Analysis/HS: HamSCI Stats)"
+        "-m", "--method", default="Stack", type=str, help="Methods to run (EA:Event Analysis/HS: HamSCI Stats)"
     )
     args = parser.parse_args()
     for k in vars(args).keys():
@@ -83,5 +135,7 @@ if __name__ == "__main__":
         run_event(args.index, args.cfg_file)
     elif args.method == "HS":
         run_hamsci_stats(args)
+    elif args.method == "Stack":
+        create_stack_plot(args.index, args.cfg_file)
     else:
         print(f"Invalid method / not implemented {args.method}")
