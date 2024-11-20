@@ -67,6 +67,7 @@ def create_stack_plot(idx, file="config/events.csv"):
     title = f"BKS, Beam: 7 / {np.round(fds['bks'].records.tfreq.mean()/1e3, 2)} MHz"
     sp.addParamPlot(fds["bks"].records, 7, title, xlabel="")
     sp.HamSciTS(hamSci.gds, title="HamSCI / 10 MHz")
+    sp.lay_vlines([row["start"], row["event"], row["end"]], ["r", "k", "b"])
     sp.save(base + "/stack_plot.png")    
     sp.close()
     return

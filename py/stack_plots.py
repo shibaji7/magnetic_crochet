@@ -66,17 +66,25 @@ class Stackplots(object):
         self.fig = plt.figure(figsize=(8, 2.5 * num_subplots), dpi=300)
         return
 
+    def lay_vlines(
+        self,
+        vlines=[], 
+        colors=[],
+    ):
+        all_axes = self.fig.axes
+        for ax in all_axes:
+            for v, c in zip(vlines, colors):
+                ax.axvline(v, color=c, ls="--", lw=0.6)
+        return
+
     def GOESSDOPlot(
         self, time, xl, xs, 
         sdo_time, sdo_euv, 
-        vlines=[], colors=[],
     ):
         """ """
         ax = self._add_axis()
         ax.set_xlim(self.drange)
         ax.set_ylim(1e-7, 1e-3)
-        for v, c in zip(vlines, colors):
-            ax.axvline(v, color=c, ls="--", lw=0.6)
         ax.axhline(1e-6, color="k", ls=":", lw=0.6)
         ax.axhline(1e-5, color="k", ls=":", lw=0.6)
         ax.axhline(1e-4, color="k", ls=":", lw=0.6)
@@ -90,13 +98,10 @@ class Stackplots(object):
             time, xs, color="b", ls="-", lw=1, label=r"$\lambda_0=0.05-0.4 nm$"
         )
         ax.set_xticklabels([])
-        ax.text(0.05, 0.95, "(a)", ha="left", va="center", transform=ax.transAxes)
         ax.legend(loc=1)
         ax = ax.twinx()
         ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
         ax.set_xlim(self.drange)
-        for v, c in zip(vlines, colors):
-            ax.axvline(v, color=c, ls="--", lw=0.6)
         ax.set_ylabel(
             "Irradiance (SDO, 0.1-7 nm)\n"+ r"[$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
         )
@@ -174,18 +179,24 @@ class Stackplots(object):
             val = gs.meta["solar_lon"]
             ax.plot(o.UTC, o.Power_dB, ls="-", lw=0.8, color=mpbl.cmap(mpbl.norm(val)))
         ax.set_xlim(self.drange)
-        ax.set_ylim(-80, -20)
+        ax.set_ylim(-100, -20)
         if title:
             ax.set_title(title, loc="left", fontdict={"fontweight": "bold"})
         # self.fig.colorbar(mpbl, ax=ax, label="Longitude")
         return
 
     def _add_axis(self):
+        tag = chr(97+self._num_subplots_created)
         self._num_subplots_created += 1
         ax = self.fig.add_subplot(self.num_subplots, 1, self._num_subplots_created)
         ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
         major_locator = mdates.HourLocator(byhour=range(0, 24, 1))
         ax.xaxis.set_major_locator(major_locator)
+        ax.text(
+            0.05, 0.95, f"({tag})", ha="left", 
+            va="center", transform=ax.transAxes,
+            fontdict={"size": 11, "fontweight": "bold"}
+        )
         return ax
 
     def _add_colorbar(self, fig, ax, im, label=""):
