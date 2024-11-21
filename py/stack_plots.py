@@ -176,8 +176,9 @@ class Stackplots(object):
 
         for gs in [gds[3],gds[5],gds[9]]:
             o = gs.data["filtered"]["df"]
+            o = gs.data["raw"]["df"]
             val = gs.meta["solar_lon"]
-            ax.plot(o.UTC, o.Power_dB, ls="-", lw=0.8, color=mpbl.cmap(mpbl.norm(val)))
+            ax.plot(o.UTC, 20*np.log10(o.Vpk), ls="-", lw=0.8, color=mpbl.cmap(mpbl.norm(val)))
         ax.set_xlim(self.drange)
         ax.set_ylim(-100, -20)
         if title:
