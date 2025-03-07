@@ -21,7 +21,7 @@ import utils
 from pysolar.solar import get_altitude_fast
 
 
-def setup(science=True):
+def setup(font_size=11, science=True):
     if science:
         #plt.style.use(["science", "ieee"])
         plt.rcParams.update(
@@ -35,11 +35,11 @@ def setup(science=True):
                     "Lucida Grande",
                     "Verdana",
                 ],
-                "font.size": 11,
+                "font.size": font_size,
             }
         )
     else:
-        mpl.rcParams["font.size"] = 16
+        mpl.rcParams["font.size"] = font_size
         mpl.rcParams["font.weight"] = "bold"
         mpl.rcParams["axes.labelweight"] = "bold"
         mpl.rcParams["axes.titleweight"] = "bold"
@@ -57,13 +57,15 @@ class Stackplots(object):
         drange,
         fig_title=None,
         num_subplots=3,
+        font_size=14.
     ):
         self.drange = drange
         self.num_subplots = num_subplots
         self._num_subplots_created = 0
         self.fig_title = fig_title
-        setup()
-        self.fig = plt.figure(figsize=(8, 2.5 * num_subplots), dpi=300)
+        self.font_size=font_size
+        setup(self.font_size)
+        self.fig = plt.figure(figsize=(8, 2.5 * num_subplots), dpi=240)
         return
 
     def lay_vlines(
@@ -89,7 +91,7 @@ class Stackplots(object):
         ax.axhline(1e-5, color="k", ls=":", lw=0.6)
         ax.axhline(1e-4, color="k", ls=":", lw=0.6)
         ax.set_ylabel(
-            r"Irradiance(GOES) [$Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
+            r"Irradiance(GOES) [$Wm^{-2}$]", fontdict={"size": self.font_size, "fontweight": "bold"}
         )
         ax.semilogy(
             time, xl, color="r", ls="-", lw=1, label=r"$\lambda_1=0.1-0.8 nm$"
@@ -100,10 +102,10 @@ class Stackplots(object):
         ax.set_xticklabels([])
         ax.legend(loc=1)
         ax = ax.twinx()
-        ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
+        ax.set_xlabel("Time [UT]", fontdict={"size": self.font_size, "fontweight": "bold"})
         ax.set_xlim(self.drange)
         ax.set_ylabel(
-            "Irradiance (SDO, 0.1-7 nm)\n"+ r"[$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
+            "Irradiance (SDO, 0.1-7 nm)\n"+ r"[$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": self.font_size, "fontweight": "bold"}
         )
         ax.plot(
             sdo_time, sdo_euv*1e3, color="k", ls="-", lw=1,
@@ -145,10 +147,10 @@ class Stackplots(object):
         else:
             major_locator = mdates.HourLocator(byhour=range(0, 24, 4))
         ax.xaxis.set_major_locator(major_locator)
-        ax.set_xlabel(xlabel, fontdict={"size": 11, "fontweight": "bold"})
+        ax.set_xlabel(xlabel, fontdict={"size": self.font_size, "fontweight": "bold"})
         ax.set_xlim([mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])])
         ax.set_ylim(0, yrange)
-        ax.set_ylabel(ylab, fontdict={"size": 11, "fontweight": "bold"})
+        ax.set_ylabel(ylab, fontdict={"size": self.font_size, "fontweight": "bold"})
         im = ax.pcolormesh(X, Y, Z.T, lw=0.01, edgecolors="None", cmap=cmap,
                         vmax=p_max, vmin=p_min, shading="nearest", zorder=3)
         if cbar:
@@ -171,14 +173,16 @@ class Stackplots(object):
         norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
         mpbl = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
         
-        ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
-        ax.set_ylabel(r"Power [dB]", fontdict={"size": 11, "fontweight": "bold"})
+        ax.set_xlabel("Time [UT]", fontdict={"size": self.font_size, "fontweight": "bold"})
+        ax.set_ylabel(r"Power [dB]", fontdict={"size": self.font_size, "fontweight": "bold"})
 
         for gs in [gds[3],gds[5],gds[9]]:
             o = gs.data["filtered"]["df"]
-            o = gs.data["raw"]["df"]
+            print(o.head())
+            # o = gs.data["raw"]["df"]
             val = gs.meta["solar_lon"]
-            ax.plot(o.UTC, 20*np.log10(o.Vpk), ls="-", lw=0.8, color=mpbl.cmap(mpbl.norm(val)))
+            # ax.plot(o.UTC, 20*np.log10(o.Vpk), ls="-", lw=0.8, color=mpbl.cmap(mpbl.norm(val)))
+            ax.plot(o.UTC, o.Power_dB, ls="-", lw=0.8, color=mpbl.cmap(mpbl.norm(val)))
         ax.set_xlim(self.drange)
         ax.set_ylim(-100, -20)
         if title:
@@ -196,7 +200,7 @@ class Stackplots(object):
         ax.text(
             0.05, 0.95, f"({tag})", ha="left", 
             va="center", transform=ax.transAxes,
-            fontdict={"size": 11, "fontweight": "bold"}
+            fontdict={"size": self.font_size, "fontweight": "bold"}
         )
         return ax
 

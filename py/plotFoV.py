@@ -70,6 +70,7 @@ class Fan(object):
             fontweight="bold",
             fontsize=8,
         )
+        self.axes = []
         return
 
     def add_axes(self):
@@ -123,6 +124,7 @@ class Fan(object):
         gl.ylocator = mticker.FixedLocator([])
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
+        self.axes.append(ax)
         return ax
 
     def date_string(self, label_style="web"):
@@ -145,7 +147,7 @@ class Fan(object):
                     zorder=4, markerSize=10, drawline=False
                 )
             else:
-                ax.overlay_station(stations[k], markerSize=5)
+                ax.overlay_station(stations[k], markerSize=5, drawline=False)
         for rad in self.rads:
             ax.overlay_radar(rad, font_color="b")
             ax.overlay_fov(rad)
@@ -162,3 +164,35 @@ class Fan(object):
         self.fig.clf()
         plt.close()
         return
+
+
+if __name__ == "__main__":
+    import datetime as dt
+    import sys
+    sys.path.extend(["py/", "py/geo/", "py/fetch/"])
+    import pandas as pd
+    stns = pd.read_csv("config/PSWS_Node_Regiistry.csv")
+    rios = pd.read_csv("config/riometers.csv")
+    o = {}
+    for i, s in stns.iterrows():
+        o[s["Callsign"]] = {
+            "lat": s.Latitude,
+            "lon": s.Longitude,
+        }
+    o["WWV"] = {
+        "lat":40.67836111111111,
+        "lon":-105.04052777777778,
+    }
+    f = Fan(["bks", "fhe", "fhw", "cve", "cvw", "kap", "gbr", "sas", "pgr"], dt.datetime(2024, 10, 7))
+    f.generate_fov(stations=o)
+    ax = f.axes[0]
+    for i, r in rios.iterrows():
+        ax.overlay_station(
+            {
+                "lat": r.lat,
+                "lon": ((r.lon+ 180)%360)-180,
+            }, 
+            markerColor="k", marker="+",
+            zorder=4, markerSize=20, drawline=False
+        )
+    f.save("Figure4.png")

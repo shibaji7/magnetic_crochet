@@ -312,12 +312,12 @@ class SDCarto(GeoAxes):
         self,
         stn,
         tx=cartopy.crs.PlateCarree(),
-        marker="D",
+        marker="s",
         zorder=2,
-        markerColor="darkgreen",
+        markerColor="m",
         markerSize=2,
         fontSize="x-small",
-        font_color="darkgreen",
+        font_color="m",
         xOffset=5,
         yOffset=-1.5,
         annotate=False,
@@ -336,7 +336,7 @@ class SDCarto(GeoAxes):
             zorder=zorder,
             transform=tx,
             lw=0.8,
-            alpha=0.4,
+            alpha=0.8,
         )
         if drawline:
             lats, lons = (
