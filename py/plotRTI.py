@@ -567,11 +567,12 @@ def joyplot(
 
 def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[], drange=[]):
     """ """
-    #plt.style.use(["science", "ieee"])
+    # import scienceplots
+    plt.style.use(["science", "ieee"])
     plt.rcParams.update(
         {
             "figure.figsize": np.array([8, 6]),
-            "text.usetex": True,
+            "text.usetex": False,
             "font.family": "sans-serif",
             "font.sans-serif": [
                 "Tahoma",
@@ -594,11 +595,11 @@ def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[],
     for v, c in zip(vlines, colors):
         ax.axvline(v, color=c, ls="--", lw=0.6)
     ax.axhline(1e-6, color="k", ls=":", lw=0.6)
-    ax.text(time[-1], 1e-6, "C", ha="left", va="center")
+    ax.text(drange[-1], 1e-6, "C", ha="left", va="center")
     ax.axhline(1e-5, color="k", ls=":", lw=0.6)
-    ax.text(time[-1], 1e-5, "M", ha="left", va="center")
+    ax.text(drange[-1], 1e-5, "M", ha="left", va="center")
     ax.axhline(1e-4, color="k", ls=":", lw=0.6)
-    ax.text(time[-1], 1e-4, "X", ha="left", va="center")
+    ax.text(drange[-1], 1e-4, "X", ha="left", va="center")
     ax.set_ylabel(
         r"Irradiance [$Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
@@ -612,12 +613,12 @@ def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[],
     ax.set_xticklabels([])
     ax.text(0.05, 0.95, "(a)", ha="left", va="center", transform=ax.transAxes)
     ax.legend(loc=1)
-    ax.text(0.05, 1.05, "Class: X2.8", ha="left", va="center", transform=ax.transAxes)
+    ax.text(0.05, 1.05, f"Date: {drange[0].strftime('%b %d, %Y')}", ha="left", va="center", transform=ax.transAxes)
 
 
     ax = fig.add_subplot(212)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("$%H^{%M}$"))
-    major_locator = mdates.HourLocator(byhour=range(0, 24, 1))
+    # major_locator = mdates.HourLocator(byhour=range(0, 24, 3))
     ax.xaxis.set_major_locator(major_locator)
     ax.set_xlabel("Time [UT]", fontdict={"size": 11, "fontweight": "bold"})
     ax.set_xlim(drange)
@@ -626,7 +627,6 @@ def GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, filepath, vlines=[], colors=[],
     ax.set_ylabel(
         r"Irradiance (0.1-7 nm) [$\times 10^{-3}$ $Wm^{-2}$]", fontdict={"size": 11, "fontweight": "bold"}
     )
-    #print(sdo_time, sdo_euv)
     ax.plot(
         sdo_time, sdo_euv*1e3, color="k", ls="-", lw=1,
     )

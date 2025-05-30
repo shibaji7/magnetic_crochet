@@ -470,6 +470,29 @@ def fork_event_based_mpi(file="config/events.csv"):
         break
     return
 
+def plot_goes_data(date):
+    import sys
+    sys.path.extend(["py/", "py/fetch/", "py/geo/"])
+    from flare import FlareTS
+    from plotRTI import GOESSDOPlot
+    flareTS = FlareTS([date, date+dt.timedelta(1)])
+    base = "data/figures/"
+    os.makedirs(base, exist_ok=True)
+    fname = f"{base}GOES.png"
+    time = flareTS.dfs["goes"].time.tolist()
+    xs, xl = (flareTS.dfs["goes"].xrsa, flareTS.dfs["goes"].xrsb)
+    vlines, colors = (
+        [],
+        [],
+    )
+    sdo_time, sdo_euv = (
+        flareTS.dfs["eve"].time.tolist(),
+        flareTS.dfs["eve"]["0.1-7ESPquad"]
+    ) if len(flareTS.dfs["eve"]) > 0 else (np.array([np.nan]), np.array([np.nan]))
+    GOESSDOPlot(time, xl, xs, sdo_time, sdo_euv, fname, vlines, colors, 
+                drange=[date+dt.timedelta(hours=14), date+dt.timedelta(hours=18)])
+    return
 
 if __name__ == "__main__":
-    fork_event_based_mpi()
+    # fork_event_based_mpi()
+    plot_goes_data(dt.datetime(2024, 10, 10))
